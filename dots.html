@@ -1,0 +1,1486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dots and Boxes</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@400;500;600&display=swap');
+
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+
+  :root {
+    --bg: #141618;
+    --surface: #1a1d20;
+    --surface-2: #1e2124;
+    --border: #2a2e33;
+    --accent: #2266bb;
+    --accent-dim: #1a4a88;
+    --cream: #d4dae4;
+    --cream-dim: #7888a0;
+    --p1-color: #2266bb;
+    --p2-color: #cc3344;
+  }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: var(--bg);
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    overflow: hidden;
+  }
+
+  body {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: max(20px, calc(50vh - 310px));
+    background:
+      radial-gradient(ellipse at 30% 20%, rgba(34,102,187,0.05) 0%, transparent 60%),
+      radial-gradient(ellipse at 70% 80%, rgba(204,51,68,0.04) 0%, transparent 60%),
+      var(--bg);
+  }
+
+  .game-container {
+    display: flex;
+    gap: 30px;
+    align-items: flex-start;
+    user-select: none;
+  }
+
+  .board-frame {
+    position: relative;
+    flex-shrink: 0;
+    padding: 18px;
+    background: linear-gradient(145deg, #1e2226, #141618, #1a1d20);
+    border-radius: 8px;
+    box-shadow:
+      0 2px 4px rgba(0,0,0,0.4),
+      0 8px 24px rgba(0,0,0,0.5),
+      0 20px 60px rgba(0,0,0,0.4),
+      inset 0 1px 0 rgba(34,102,187,0.06);
+  }
+
+  .board-frame::before {
+    content: '';
+    position: absolute;
+    inset: 4px;
+    border: 1px solid rgba(34,102,187,0.1);
+    border-radius: 6px;
+    pointer-events: none;
+  }
+
+  canvas {
+    display: block;
+    border-radius: 3px;
+    cursor: pointer;
+  }
+
+  .sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 220px;
+    flex-shrink: 0;
+  }
+
+  .back-link {
+    font-size: 12px;
+    color: var(--cream-dim);
+    text-decoration: none;
+    letter-spacing: 1px;
+    transition: color 0.2s;
+  }
+  .back-link:hover { color: var(--accent); }
+
+  .game-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    line-height: 1;
+  }
+  .game-title span {
+    display: block;
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--cream-dim);
+    letter-spacing: 6px;
+    margin-top: 4px;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  /* ── Mode Selector ── */
+  .mode-panel {
+    padding: 14px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .mode-panel h3 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent-dim);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 10px;
+  }
+  .mode-toggle {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+  .mode-btn {
+    flex: 1;
+    padding: 8px 6px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--cream-dim);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+  }
+  .mode-btn:hover {
+    border-color: var(--accent-dim);
+    color: var(--cream);
+  }
+  .mode-btn.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(34,102,187,0.08);
+  }
+  .diff-section {
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    transition: max-height 0.3s ease, opacity 0.25s ease, margin-top 0.3s ease;
+    margin-top: 0;
+  }
+  .diff-section.visible {
+    max-height: 120px;
+    opacity: 1;
+    margin-top: 10px;
+  }
+  .diff-label {
+    font-size: 11px;
+    color: var(--cream-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+  }
+  .diff-btns {
+    display: flex;
+    gap: 6px;
+  }
+  .diff-btn {
+    flex: 1;
+    padding: 7px 4px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--cream-dim);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+  }
+  .diff-btn:hover {
+    border-color: var(--accent-dim);
+    color: var(--cream);
+  }
+  .diff-btn.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(34,102,187,0.08);
+  }
+
+  .model-select {
+    width: 100%;
+    padding: 7px 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    cursor: pointer;
+    outline: none;
+  }
+  .model-select:focus {
+    border-color: var(--accent-dim);
+  }
+
+  .turn-indicator {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    transition: border-color 0.3s;
+  }
+  .turn-indicator.active-p1 { border-color: var(--p1-color); }
+  .turn-indicator.active-p2 { border-color: var(--p2-color); }
+
+  .turn-disc {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+  }
+  .turn-disc.p1 { background: radial-gradient(circle at 35% 35%, #4488dd, #1a4488 70%); }
+  .turn-disc.p2 { background: radial-gradient(circle at 35% 35%, #ee5566, #992233 70%); }
+
+  .turn-text {
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .turn-label {
+    font-size: 11px;
+    color: var(--cream-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .score-panel {
+    padding: 14px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .score-item {
+    text-align: center;
+  }
+  .score-label {
+    font-size: 11px;
+    color: var(--cream-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+  .score-value {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .score-value.p1 { color: var(--p1-color); }
+  .score-value.p2 { color: var(--p2-color); }
+  .score-divider {
+    width: 1px;
+    height: 40px;
+    background: var(--border);
+  }
+
+  .status-msg {
+    padding: 14px 18px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--cream-dim);
+    line-height: 1.5;
+    height: 67px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    transition: all 0.3s;
+  }
+  .status-msg.winner {
+    border-color: var(--accent);
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .status-msg.thinking {
+    border-color: var(--p2-color);
+    color: var(--cream-dim);
+  }
+
+  .btn-new {
+    padding: 12px 20px;
+    background: transparent;
+    border: 1px solid var(--accent-dim);
+    border-radius: 6px;
+    color: var(--accent);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-new:hover {
+    background: rgba(34,102,187,0.1);
+    border-color: var(--accent);
+  }
+
+  /* Thinking dots */
+  @keyframes dotPulse {
+    0%, 80%, 100% { opacity: 0.2; }
+    40% { opacity: 1; }
+  }
+  .thinking-dots span {
+    animation: dotPulse 1.4s infinite;
+    font-size: 18px;
+    letter-spacing: 2px;
+  }
+  .thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+  /* ── Chat Panel ── */
+  .chat-spacer {
+    width: 220px;
+    flex-shrink: 0;
+  }
+  .chat-panel {
+    display: none;
+    flex-direction: column;
+    width: 340px;
+    flex-shrink: 0;
+    height: 612px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .chat-panel.visible { display: flex; }
+
+  .chat-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent-dim);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    flex-shrink: 0;
+  }
+
+  .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .chat-bubble {
+    max-width: 85%;
+    padding: 8px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    line-height: 1.45;
+    word-wrap: break-word;
+    animation: fadeIn 0.2s ease;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .chat-bubble.user {
+    align-self: flex-end;
+    background: rgba(34,102,187,0.15);
+    color: var(--cream);
+    border-bottom-right-radius: 4px;
+  }
+  .chat-bubble.llm {
+    align-self: flex-start;
+    background: rgba(204,51,68,0.15);
+    color: var(--cream);
+    border-bottom-left-radius: 4px;
+  }
+  .chat-bubble.system {
+    align-self: center;
+    background: transparent;
+    color: var(--cream-dim);
+    font-size: 11px;
+    font-style: italic;
+    padding: 4px 8px;
+  }
+  .chat-bubble.llm-typing {
+    align-self: flex-start;
+    background: rgba(204,51,68,0.1);
+    color: var(--cream-dim);
+    border-bottom-left-radius: 4px;
+  }
+
+  .chat-input-row {
+    display: flex;
+    gap: 6px;
+    padding: 10px 12px;
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .chat-input {
+    flex: 1;
+    padding: 8px 10px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .chat-input:focus { border-color: var(--accent-dim); }
+  .chat-input::placeholder { color: var(--cream-dim); opacity: 0.5; }
+
+  .chat-send {
+    padding: 8px 14px;
+    background: rgba(204,51,68,0.2);
+    border: 1px solid rgba(204,51,68,0.3);
+    border-radius: 6px;
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .chat-send:hover {
+    background: rgba(204,51,68,0.3);
+    border-color: #cc3344;
+  }
+
+  @media (max-width: 1000px) {
+    .game-container { flex-direction: column; gap: 20px; }
+    .sidebar { flex-direction: row; flex-wrap: wrap; min-width: unset; width: auto !important; }
+    .sidebar > * { flex: 1; min-width: 140px; }
+    .chat-panel { width: 100%; height: 300px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="game-container">
+  <div class="sidebar">
+    <div>
+      <a href="index.html" class="back-link">&larr; Back</a>
+      <div class="game-title" style="margin-top:6px">Dots &amp;<br>Boxes<span>Pen &amp; Paper Classic</span></div>
+    </div>
+
+    <div class="mode-panel">
+      <h3>Game Mode</h3>
+      <div class="mode-toggle">
+        <button class="mode-btn active" data-mode="1p" id="btn1P">1 Player</button>
+        <button class="mode-btn" data-mode="llm" id="btnLLM">vs LLM</button>
+        <button class="mode-btn" data-mode="2p" id="btn2P">2 Player</button>
+      </div>
+      <div class="diff-section visible" id="diffSection">
+        <div class="diff-label">Difficulty</div>
+        <div class="diff-btns">
+          <button class="diff-btn" data-diff="1" id="diffEasy">Easy</button>
+          <button class="diff-btn active" data-diff="2" id="diffMedium">Medium</button>
+          <button class="diff-btn" data-diff="3" id="diffHard">Hard</button>
+        </div>
+      </div>
+      <div class="diff-section" id="llmSection">
+        <div class="diff-label">Ollama Model</div>
+        <select id="modelSelect" class="model-select">
+          <option>Loading models...</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="turn-indicator" id="turnIndicator">
+      <div class="turn-disc p1" id="turnDisc"></div>
+      <div>
+        <div class="turn-label">Current Turn</div>
+        <div class="turn-text" id="turnText">Player 1</div>
+      </div>
+    </div>
+
+    <div class="score-panel">
+      <div class="score-item">
+        <div class="score-label">Blue</div>
+        <div class="score-value p1" id="score1">0</div>
+      </div>
+      <div class="score-divider"></div>
+      <div class="score-item">
+        <div class="score-label">Red</div>
+        <div class="score-value p2" id="score2">0</div>
+      </div>
+    </div>
+
+    <div class="status-msg" id="statusMsg">Click a line between dots to claim it.</div>
+
+    <button class="btn-new" id="btnNew">New Game</button>
+  </div>
+
+  <div class="board-frame">
+    <canvas id="board"></canvas>
+  </div>
+
+  <div class="chat-panel" id="chatPanel">
+    <div class="chat-header">Trash Talk</div>
+    <div class="chat-messages" id="chatMessages">
+      <div class="chat-bubble system">Chat with the LLM opponent. It bites back.</div>
+    </div>
+    <div class="chat-input-row">
+      <input type="text" class="chat-input" id="chatInput" placeholder="Talk trash..." maxlength="200" autocomplete="off">
+      <button class="chat-send" id="chatSend">Send</button>
+    </div>
+  </div>
+  <div class="chat-spacer" id="chatSpacer"></div>
+</div>
+
+<script>
+// ── Constants ──
+const GRID = 6;          // 6x6 dots = 5x5 boxes
+const BOXES = GRID - 1;  // 5
+const SPACING = 80;
+const PAD = 30;
+const CANVAS_SIZE = PAD * 2 + (GRID - 1) * SPACING; // 460
+const DOT_R = 6;
+const LINE_W = 5;
+const P1_COLOR = '#2266bb';
+const P2_COLOR = '#cc3344';
+const P1_FILL = 'rgba(34,102,187,0.25)';
+const P2_FILL = 'rgba(204,51,68,0.25)';
+const HOVER_COLOR = 'rgba(100,140,200,0.5)';
+const AI_SIDE = 1;
+
+// ── Audio ──
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx;
+function ensureAudio() { if (!audioCtx) audioCtx = new AudioCtx(); }
+
+function playSound(type) {
+  ensureAudio();
+  const actx = audioCtx;
+  const now = actx.currentTime;
+
+  if (type === 'line') {
+    // Pencil scratch
+    const buf = actx.createBuffer(1, actx.sampleRate * 0.12, actx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) {
+      data[i] = (Math.random() * 2 - 1) * 0.08 * (1 - i / data.length);
+    }
+    const src = actx.createBufferSource();
+    src.buffer = buf;
+    const hp = actx.createBiquadFilter();
+    hp.type = 'highpass'; hp.frequency.value = 2000;
+    const g = actx.createGain();
+    g.gain.setValueAtTime(0.15, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+    src.connect(hp); hp.connect(g); g.connect(actx.destination);
+    src.start(now); src.stop(now + 0.12);
+  } else if (type === 'box') {
+    // Ding
+    const o = actx.createOscillator();
+    const g = actx.createGain();
+    o.type = 'sine'; o.frequency.setValueAtTime(880, now);
+    o.frequency.exponentialRampToValueAtTime(1200, now + 0.05);
+    o.frequency.exponentialRampToValueAtTime(880, now + 0.2);
+    g.gain.setValueAtTime(0.1, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+    o.connect(g); g.connect(actx.destination);
+    o.start(now); o.stop(now + 0.3);
+  } else if (type === 'win') {
+    [523, 659, 784, 1047].forEach((f, i) => {
+      const o = actx.createOscillator();
+      const gg = actx.createGain();
+      o.type = 'sine'; o.frequency.value = f;
+      gg.gain.setValueAtTime(0, now + i * 0.12);
+      gg.gain.linearRampToValueAtTime(0.07, now + i * 0.12 + 0.03);
+      gg.gain.exponentialRampToValueAtTime(0.001, now + i * 0.12 + 0.3);
+      o.connect(gg); gg.connect(actx.destination);
+      o.start(now + i * 0.12); o.stop(now + i * 0.12 + 0.3);
+    });
+  } else if (type === 'lose') {
+    [400, 350, 300, 200].forEach((f, i) => {
+      const o = actx.createOscillator();
+      const gg = actx.createGain();
+      o.type = 'sawtooth'; o.frequency.value = f;
+      gg.gain.setValueAtTime(0, now + i * 0.15);
+      gg.gain.linearRampToValueAtTime(0.05, now + i * 0.15 + 0.03);
+      gg.gain.exponentialRampToValueAtTime(0.001, now + i * 0.15 + 0.25);
+      o.connect(gg); gg.connect(actx.destination);
+      o.start(now + i * 0.15); o.stop(now + i * 0.15 + 0.25);
+    });
+  }
+}
+
+// ── Canvas Setup ──
+const canvas = document.getElementById('board');
+const ctx = canvas.getContext('2d');
+canvas.width = CANVAS_SIZE;
+canvas.height = CANVAS_SIZE;
+canvas.style.width = CANVAS_SIZE + 'px';
+canvas.style.height = CANVAS_SIZE + 'px';
+
+// ── Game State ──
+// Horizontal lines: hLines[row][col] — row 0..GRID-1, col 0..BOXES-1
+// Vertical lines: vLines[row][col] — row 0..BOXES-1, col 0..GRID-1
+// Boxes: boxes[row][col] — row 0..BOXES-1, col 0..BOXES-1
+// Values: 0 = unclaimed, 1 = player 1, 2 = player 2
+let hLines, vLines, boxes;
+let turn = 0;    // 0 = player 1 (blue), 1 = player 2 (red)
+let scores = [0, 0];
+let gameOver = false;
+let aiThinking = false;
+let hoverLine = null; // {type:'h'|'v', row, col}
+
+// ── Mode & Difficulty ──
+let gameMode = '1p';
+let difficulty = 2;
+let llmModel = '';
+
+// ── Mode UI ──
+document.getElementById('btn1P').addEventListener('click', () => setMode('1p'));
+document.getElementById('btn2P').addEventListener('click', () => setMode('2p'));
+document.getElementById('btnLLM').addEventListener('click', () => setMode('llm'));
+document.getElementById('diffEasy').addEventListener('click', () => setDifficulty(1));
+document.getElementById('diffMedium').addEventListener('click', () => setDifficulty(2));
+document.getElementById('diffHard').addEventListener('click', () => setDifficulty(3));
+
+function setMode(m) {
+  gameMode = m;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === m));
+  document.getElementById('diffSection').classList.toggle('visible', m === '1p' || m === 'llm');
+  document.getElementById('llmSection').classList.toggle('visible', m === 'llm');
+  if (m === 'llm') loadModels();
+  showChat(m === 'llm');
+  initGame();
+}
+
+function setDifficulty(d) {
+  difficulty = d;
+  document.querySelectorAll('.diff-btn').forEach(b => b.classList.toggle('active', +b.dataset.diff === d));
+  initGame();
+}
+
+// ── Ollama Model Loading ──
+async function loadModels() {
+  const sel = document.getElementById('modelSelect');
+  try {
+    const res = await fetch('/api/models');
+    const data = await res.json();
+    const models = data.models || data;
+    sel.innerHTML = '';
+    models.forEach(m => {
+      const name = m.name || m.id || m;
+      const opt = document.createElement('option');
+      opt.value = name; opt.textContent = name;
+      sel.appendChild(opt);
+    });
+    llmModel = sel.value;
+    sel.addEventListener('change', () => { llmModel = sel.value; });
+  } catch (e) {
+    sel.innerHTML = '<option>No models found</option>';
+  }
+}
+
+// ── Helpers ──
+function dotPos(row, col) {
+  return { x: PAD + col * SPACING, y: PAD + row * SPACING };
+}
+
+function isLineSet(type, row, col) {
+  return type === 'h' ? hLines[row][col] !== 0 : vLines[row][col] !== 0;
+}
+
+function totalLines() {
+  const hTotal = GRID * BOXES;    // 6 rows * 5 cols of horizontal lines
+  const vTotal = BOXES * GRID;    // 5 rows * 6 cols of vertical lines
+  return hTotal + vTotal;
+}
+
+function claimedLines() {
+  let count = 0;
+  for (let r = 0; r < GRID; r++) for (let c = 0; c < BOXES; c++) if (hLines[r][c]) count++;
+  for (let r = 0; r < BOXES; r++) for (let c = 0; c < GRID; c++) if (vLines[r][c]) count++;
+  return count;
+}
+
+function getAllFreeLines() {
+  const lines = [];
+  for (let r = 0; r < GRID; r++) for (let c = 0; c < BOXES; c++) {
+    if (!hLines[r][c]) lines.push({type:'h', row:r, col:c});
+  }
+  for (let r = 0; r < BOXES; r++) for (let c = 0; c < GRID; c++) {
+    if (!vLines[r][c]) lines.push({type:'v', row:r, col:c});
+  }
+  return lines;
+}
+
+// Count sides of a box that are filled
+function boxSides(r, c) {
+  let count = 0;
+  if (hLines[r][c]) count++;       // top
+  if (hLines[r+1][c]) count++;     // bottom
+  if (vLines[r][c]) count++;       // left
+  if (vLines[r][c+1]) count++;     // right
+  return count;
+}
+
+// Which boxes does a line border?
+function adjacentBoxes(type, row, col) {
+  const result = [];
+  if (type === 'h') {
+    // Horizontal line at (row, col): borders box above (row-1, col) and below (row, col)
+    if (row > 0) result.push({r: row-1, c: col});
+    if (row < BOXES) result.push({r: row, c: col});
+  } else {
+    // Vertical line at (row, col): borders box left (row, col-1) and right (row, col)
+    if (col > 0) result.push({r: row, c: col-1});
+    if (col < BOXES) result.push({r: row, c: col});
+  }
+  return result;
+}
+
+// Try placing a line and return how many boxes it completes
+function wouldComplete(type, row, col) {
+  const adj = adjacentBoxes(type, row, col);
+  let count = 0;
+  for (const {r, c} of adj) {
+    if (boxSides(r, c) === 3) count++;
+  }
+  return count;
+}
+
+// Does placing this line give the opponent a box to complete?
+function wouldGiveAway(type, row, col) {
+  // Temporarily set line
+  if (type === 'h') hLines[row][col] = 1; else vLines[row][col] = 1;
+  const adj = adjacentBoxes(type, row, col);
+  let gives = false;
+  for (const {r, c} of adj) {
+    if (boxes[r][c] === 0 && boxSides(r, c) === 3) {
+      gives = true;
+      break;
+    }
+  }
+  if (type === 'h') hLines[row][col] = 0; else vLines[row][col] = 0;
+  return gives;
+}
+
+// ── Init Game ──
+function initGame() {
+  hLines = Array.from({length: GRID}, () => Array(BOXES).fill(0));
+  vLines = Array.from({length: BOXES}, () => Array(GRID).fill(0));
+  boxes = Array.from({length: BOXES}, () => Array(BOXES).fill(0));
+  turn = 0;
+  scores = [0, 0];
+  gameOver = false;
+  aiThinking = false;
+  hoverLine = null;
+  updateUI();
+  draw();
+}
+
+// ── Update UI ──
+function updateUI() {
+  const ti = document.getElementById('turnIndicator');
+  const td = document.getElementById('turnDisc');
+  const tt = document.getElementById('turnText');
+  const status = document.getElementById('statusMsg');
+
+  ti.className = 'turn-indicator' + (turn === 0 ? ' active-p1' : ' active-p2');
+  td.className = 'turn-disc ' + (turn === 0 ? 'p1' : 'p2');
+
+  document.getElementById('score1').textContent = scores[0];
+  document.getElementById('score2').textContent = scores[1];
+
+  const isAI = (gameMode === '1p' || gameMode === 'llm') && turn === AI_SIDE;
+  if (gameMode === '2p') {
+    tt.textContent = turn === 0 ? 'Player 1 (Blue)' : 'Player 2 (Red)';
+  } else {
+    tt.textContent = turn === 0 ? 'Your turn' : (gameMode === 'llm' ? 'LLM thinking' : 'AI thinking');
+  }
+
+  status.className = 'status-msg';
+  if (gameOver) {
+    let msg;
+    if (scores[0] > scores[1]) {
+      msg = gameMode === '2p' ? 'Blue wins!' : 'You win!';
+    } else if (scores[1] > scores[0]) {
+      msg = gameMode === '2p' ? 'Red wins!' : (gameMode === 'llm' ? 'LLM wins!' : 'AI wins!');
+    } else {
+      msg = "It's a draw!";
+    }
+    msg += ` (${scores[0]} - ${scores[1]})`;
+    status.textContent = msg;
+    status.className = 'status-msg winner';
+  } else if (aiThinking) {
+    status.innerHTML = '<span class="thinking-dots"><span>.</span><span>.</span><span>.</span></span>';
+    status.className = 'status-msg thinking';
+  } else {
+    status.textContent = 'Click a line between dots to claim it.';
+  }
+}
+
+// ── Drawing ──
+function draw() {
+  ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+
+  // Graph paper background
+  ctx.fillStyle = '#f4f0e8';
+  ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+
+  // Light blue grid lines
+  ctx.strokeStyle = '#c8d8e8';
+  ctx.lineWidth = 0.5;
+  for (let i = 0; i <= CANVAS_SIZE; i += 16) {
+    ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, CANVAS_SIZE); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(CANVAS_SIZE, i); ctx.stroke();
+  }
+  // Darker grid at spacing intervals
+  ctx.strokeStyle = '#b0c4d8';
+  ctx.lineWidth = 0.8;
+  for (let i = 0; i <= CANVAS_SIZE; i += 80) {
+    ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, CANVAS_SIZE); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(CANVAS_SIZE, i); ctx.stroke();
+  }
+
+  // Draw completed boxes
+  for (let r = 0; r < BOXES; r++) {
+    for (let c = 0; c < BOXES; c++) {
+      if (boxes[r][c] !== 0) {
+        const tl = dotPos(r, c);
+        ctx.fillStyle = boxes[r][c] === 1 ? P1_FILL : P2_FILL;
+        ctx.fillRect(tl.x, tl.y, SPACING, SPACING);
+
+        // Draw initial
+        ctx.font = '600 28px "Cormorant Garamond", serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = boxes[r][c] === 1 ? 'rgba(34,102,187,0.6)' : 'rgba(204,51,68,0.6)';
+        const label = boxes[r][c] === 1 ? 'B' : 'R';
+        ctx.fillText(label, tl.x + SPACING/2, tl.y + SPACING/2);
+      }
+    }
+  }
+
+  // Draw hover highlight
+  if (hoverLine && !gameOver && !aiThinking) {
+    const {type, row, col} = hoverLine;
+    drawLine(type, row, col, HOVER_COLOR, 7);
+  }
+
+  // Draw claimed horizontal lines
+  for (let r = 0; r < GRID; r++) {
+    for (let c = 0; c < BOXES; c++) {
+      if (hLines[r][c]) {
+        const color = hLines[r][c] === 1 ? P1_COLOR : P2_COLOR;
+        drawLine('h', r, c, color, LINE_W);
+      }
+    }
+  }
+
+  // Draw claimed vertical lines
+  for (let r = 0; r < BOXES; r++) {
+    for (let c = 0; c < GRID; c++) {
+      if (vLines[r][c]) {
+        const color = vLines[r][c] === 1 ? P1_COLOR : P2_COLOR;
+        drawLine('v', r, c, color, LINE_W);
+      }
+    }
+  }
+
+  // Draw dots
+  for (let r = 0; r < GRID; r++) {
+    for (let c = 0; c < GRID; c++) {
+      const p = dotPos(r, c);
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, DOT_R, 0, Math.PI * 2);
+      ctx.fillStyle = '#1a2244';
+      ctx.fill();
+      // Subtle highlight
+      ctx.beginPath();
+      ctx.arc(p.x - 1, p.y - 1, DOT_R * 0.4, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(100,120,180,0.3)';
+      ctx.fill();
+    }
+  }
+}
+
+function drawLine(type, row, col, color, width) {
+  let p1, p2;
+  if (type === 'h') {
+    p1 = dotPos(row, col);
+    p2 = dotPos(row, col + 1);
+  } else {
+    p1 = dotPos(row, col);
+    p2 = dotPos(row + 1, col);
+  }
+  ctx.beginPath();
+  ctx.moveTo(p1.x, p1.y);
+  ctx.lineTo(p2.x, p2.y);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = width;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+}
+
+// ── Hit Detection ──
+function nearestLine(mx, my) {
+  let best = null, bestDist = 20; // threshold distance in px
+
+  // Check horizontal lines
+  for (let r = 0; r < GRID; r++) {
+    for (let c = 0; c < BOXES; c++) {
+      if (hLines[r][c]) continue;
+      const p1 = dotPos(r, c);
+      const p2 = dotPos(r, c + 1);
+      const cx = (p1.x + p2.x) / 2;
+      const cy = p1.y;
+      // Distance from point to line segment center region
+      const dx = mx - cx;
+      const dy = my - cy;
+      // Check if we're roughly within the segment
+      if (mx >= p1.x + DOT_R && mx <= p2.x - DOT_R) {
+        const d = Math.abs(dy);
+        if (d < bestDist) { bestDist = d; best = {type:'h', row:r, col:c}; }
+      } else {
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist < bestDist) { bestDist = dist; best = {type:'h', row:r, col:c}; }
+      }
+    }
+  }
+
+  // Check vertical lines
+  for (let r = 0; r < BOXES; r++) {
+    for (let c = 0; c < GRID; c++) {
+      if (vLines[r][c]) continue;
+      const p1 = dotPos(r, c);
+      const p2 = dotPos(r + 1, c);
+      const cx = p1.x;
+      const cy = (p1.y + p2.y) / 2;
+      const dx = mx - cx;
+      const dy = my - cy;
+      if (my >= p1.y + DOT_R && my <= p2.y - DOT_R) {
+        const d = Math.abs(dx);
+        if (d < bestDist) { bestDist = d; best = {type:'v', row:r, col:c}; }
+      } else {
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist < bestDist) { bestDist = dist; best = {type:'v', row:r, col:c}; }
+      }
+    }
+  }
+
+  return best;
+}
+
+// ── Canvas Interaction ──
+canvas.addEventListener('mousemove', (e) => {
+  if (gameOver || aiThinking) { hoverLine = null; draw(); return; }
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  const prev = hoverLine;
+  hoverLine = nearestLine(mx, my);
+  canvas.style.cursor = hoverLine ? 'pointer' : 'default';
+  if (hoverLine !== prev) draw();
+});
+
+canvas.addEventListener('mouseleave', () => { hoverLine = null; draw(); });
+
+canvas.addEventListener('click', (e) => {
+  if (gameOver || aiThinking) return;
+  const isAI = (gameMode !== '2p') && turn === AI_SIDE;
+  if (isAI) return;
+
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  const line = nearestLine(mx, my);
+  if (!line) return;
+
+  executeMove(line.type, line.row, line.col);
+});
+
+// ── Execute Move ──
+function executeMove(type, row, col) {
+  const player = turn + 1; // 1 or 2
+  if (type === 'h') hLines[row][col] = player;
+  else vLines[row][col] = player;
+
+  playSound('line');
+
+  // Check if any boxes were completed
+  const adj = adjacentBoxes(type, row, col);
+  let completed = 0;
+  for (const {r, c} of adj) {
+    if (boxes[r][c] === 0 && boxSides(r, c) === 4) {
+      boxes[r][c] = player;
+      scores[turn]++;
+      completed++;
+    }
+  }
+
+  if (completed > 0) {
+    playSound('box');
+  }
+
+  draw();
+  updateUI();
+
+  // Check game over
+  if (scores[0] + scores[1] === BOXES * BOXES) {
+    gameOver = true;
+    const humanWins = scores[0] > scores[1];
+    if (gameMode !== '2p') playSound(humanWins ? 'win' : 'lose');
+    updateUI();
+    if (gameMode === 'llm') autoTaunt();
+    return;
+  }
+
+  // Extra turn if completed a box
+  if (completed > 0) {
+    updateUI();
+    // If AI still has turn, continue
+    if (gameMode !== '2p' && turn === AI_SIDE) {
+      aiThinking = true;
+      updateUI();
+      if (gameMode === 'llm') autoTaunt();
+      setTimeout(() => doAITurn(), 500 + Math.random() * 300);
+    } else if (gameMode === 'llm' && turn === 0 && completed > 0) {
+      autoTaunt();
+    }
+    return;
+  }
+
+  // Switch turn
+  turn = 1 - turn;
+  updateUI();
+
+  // AI turn
+  if (gameMode !== '2p' && turn === AI_SIDE) {
+    aiThinking = true;
+    updateUI();
+    setTimeout(() => doAITurn(), 500 + Math.random() * 300);
+  }
+}
+
+function doAITurn() {
+  if (gameOver) { aiThinking = false; updateUI(); return; }
+
+  const move = chooseAIMove();
+  if (!move) { aiThinking = false; updateUI(); return; }
+
+  executeAIMove(move.type, move.row, move.col);
+}
+
+function executeAIMove(type, row, col) {
+  const player = turn + 1;
+  if (type === 'h') hLines[row][col] = player;
+  else vLines[row][col] = player;
+
+  playSound('line');
+
+  const adj = adjacentBoxes(type, row, col);
+  let completed = 0;
+  for (const {r, c} of adj) {
+    if (boxes[r][c] === 0 && boxSides(r, c) === 4) {
+      boxes[r][c] = player;
+      scores[turn]++;
+      completed++;
+    }
+  }
+
+  if (completed > 0) playSound('box');
+
+  draw();
+  updateUI();
+
+  // Check game over
+  if (scores[0] + scores[1] === BOXES * BOXES) {
+    gameOver = true;
+    aiThinking = false;
+    const humanWins = scores[0] > scores[1];
+    playSound(humanWins ? 'win' : 'lose');
+    updateUI();
+    if (gameMode === 'llm') autoTaunt();
+    return;
+  }
+
+  // Extra turn if completed a box
+  if (completed > 0) {
+    // AI gets another turn
+    setTimeout(() => doAITurn(), 400 + Math.random() * 200);
+    return;
+  }
+
+  // Switch turn
+  turn = 1 - turn;
+  aiThinking = false;
+  updateUI();
+  if (gameMode === 'llm') autoTaunt();
+}
+
+// ── AI Logic ──
+function chooseAIMove() {
+  if (difficulty === 1) return easyMove();
+  if (difficulty === 2) return mediumMove();
+  return hardMove();
+}
+
+// Easy: random line
+function easyMove() {
+  const free = getAllFreeLines();
+  if (free.length === 0) return null;
+  return free[Math.floor(Math.random() * free.length)];
+}
+
+// Medium: complete boxes if possible, otherwise avoid giving boxes
+function mediumMove() {
+  const free = getAllFreeLines();
+  if (free.length === 0) return null;
+
+  // 1. Complete any box if possible
+  for (const line of free) {
+    if (wouldComplete(line.type, line.row, line.col) > 0) return line;
+  }
+
+  // 2. Pick a line that doesn't give opponent a box
+  const safe = free.filter(l => !wouldGiveAway(l.type, l.row, l.col));
+  if (safe.length > 0) return safe[Math.floor(Math.random() * safe.length)];
+
+  // 3. All moves give away a box; pick the one that gives away the least
+  let bestLine = free[0], bestGive = Infinity;
+  for (const line of free) {
+    // Temporarily place line, count how many 3-side boxes result
+    if (line.type === 'h') hLines[line.row][line.col] = 2;
+    else vLines[line.row][line.col] = 2;
+
+    let give = 0;
+    const adj = adjacentBoxes(line.type, line.row, line.col);
+    for (const {r, c} of adj) {
+      if (boxes[r][c] === 0 && boxSides(r, c) === 3) give++;
+    }
+
+    if (line.type === 'h') hLines[line.row][line.col] = 0;
+    else vLines[line.row][line.col] = 0;
+
+    // Actually: count all boxes that would have 3 sides after this move
+    // (not just adjacent ones, but adjacent is what matters)
+    if (give < bestGive) { bestGive = give; bestLine = line; }
+  }
+  return bestLine;
+}
+
+// Hard: greedy + chain analysis + double-dealing
+function hardMove() {
+  const free = getAllFreeLines();
+  if (free.length === 0) return null;
+
+  // 1. Complete any box if possible (take all completable boxes greedily)
+  for (const line of free) {
+    if (wouldComplete(line.type, line.row, line.col) > 0) return line;
+  }
+
+  // 2. Safe moves that don't give opponent a box
+  const safe = free.filter(l => !wouldGiveAway(l.type, l.row, l.col));
+
+  // 3. Chain analysis
+  // A "chain" is a connected group of boxes each with 2 sides filled.
+  // Strategy: if chains are relevant, try double-dealing.
+  if (safe.length > 0) {
+    // Among safe moves, prefer ones that don't create long chains for opponent
+    // Simple heuristic: avoid making 2-side boxes into 2-side boxes adjacent to other 2-side boxes
+    return safe[Math.floor(Math.random() * safe.length)];
+  }
+
+  // 4. No safe moves — must give away boxes. Use chain/double-dealing strategy.
+  // Count chains of 3-side boxes. A chain is a connected sequence of boxes with 3 sides.
+  // Double-dealing: sacrifice 2 boxes in a short chain to gain control.
+  const chains = findChains();
+
+  // If there are chains, consider the double-dealing sacrifice
+  if (chains.length > 0) {
+    // Sort chains by length
+    chains.sort((a, b) => a.length - b.length);
+
+    // Count long chains (length >= 3)
+    const longChains = chains.filter(ch => ch.length >= 3);
+    const shortChains = chains.filter(ch => ch.length <= 2);
+
+    // If there's a short chain (1-2 boxes), give it away (opponent gets few boxes)
+    // Then we get all the long chains
+    if (shortChains.length > 0) {
+      // Open up a short chain: find the line that gives away the smallest chain
+      return openChainLine(shortChains[0]);
+    }
+
+    // All chains are long. Double-dealing: open a chain but leave 2 boxes
+    // by stopping early (the opponent takes most, then we get the rest)
+    if (longChains.length >= 2) {
+      // Open the smallest long chain — opponent gets it, but we get the rest
+      return openChainLine(longChains[0]);
+    }
+
+    // Only one long chain — just open it (no choice)
+    return openChainLine(chains[0]);
+  }
+
+  // Fallback: pick the line giving away fewest boxes
+  let bestLine = free[0], bestGive = Infinity;
+  for (const line of free) {
+    if (line.type === 'h') hLines[line.row][line.col] = 2;
+    else vLines[line.row][line.col] = 2;
+    let give = 0;
+    const adj = adjacentBoxes(line.type, line.row, line.col);
+    for (const {r, c} of adj) {
+      if (boxes[r][c] === 0 && boxSides(r, c) === 3) give++;
+    }
+    if (line.type === 'h') hLines[line.row][line.col] = 0;
+    else vLines[line.row][line.col] = 0;
+    if (give < bestGive) { bestGive = give; bestLine = line; }
+  }
+  return bestLine;
+}
+
+// Find chains of capturable boxes (boxes with exactly 2 sides, connected)
+function findChains() {
+  // Build adjacency of unclaimed boxes with >= 2 sides
+  const visited = Array.from({length: BOXES}, () => Array(BOXES).fill(false));
+  const chains = [];
+
+  for (let r = 0; r < BOXES; r++) {
+    for (let c = 0; c < BOXES; c++) {
+      if (visited[r][c] || boxes[r][c] !== 0) continue;
+      const sides = boxSides(r, c);
+      if (sides < 2) continue;
+
+      // BFS/DFS to find connected chain of boxes with >= 2 sides
+      const chain = [];
+      const stack = [{r, c}];
+      visited[r][c] = true;
+      while (stack.length > 0) {
+        const cur = stack.pop();
+        const curSides = boxSides(cur.r, cur.c);
+        if (curSides >= 2 && boxes[cur.r][cur.c] === 0) {
+          chain.push(cur);
+          // Check neighbors
+          const neighbors = [
+            {r: cur.r-1, c: cur.c},
+            {r: cur.r+1, c: cur.c},
+            {r: cur.r, c: cur.c-1},
+            {r: cur.r, c: cur.c+1}
+          ];
+          for (const n of neighbors) {
+            if (n.r >= 0 && n.r < BOXES && n.c >= 0 && n.c < BOXES && !visited[n.r][n.c]) {
+              visited[n.r][n.c] = true;
+              if (boxes[n.r][n.c] === 0 && boxSides(n.r, n.c) >= 2) {
+                stack.push(n);
+              }
+            }
+          }
+        }
+      }
+      if (chain.length > 0) chains.push(chain);
+    }
+  }
+  return chains;
+}
+
+// Find a line to open up a chain (complete the 3rd side of a box in the chain)
+function openChainLine(chain) {
+  // For the first box in the chain, find an unclaimed line adjacent to it
+  // that would give it 3 sides (making it capturable by opponent)
+  for (const {r, c} of chain) {
+    if (boxSides(r, c) === 2) {
+      // Find an unclaimed line for this box
+      const lines = getBoxLines(r, c);
+      for (const l of lines) {
+        if (!isLineSet(l.type, l.row, l.col)) {
+          return l;
+        }
+      }
+    }
+  }
+  // Fallback: any unclaimed line bordering chain
+  for (const {r, c} of chain) {
+    const lines = getBoxLines(r, c);
+    for (const l of lines) {
+      if (!isLineSet(l.type, l.row, l.col)) return l;
+    }
+  }
+  return getAllFreeLines()[0];
+}
+
+function getBoxLines(r, c) {
+  return [
+    {type:'h', row:r, col:c},       // top
+    {type:'h', row:r+1, col:c},     // bottom
+    {type:'v', row:r, col:c},       // left
+    {type:'v', row:r, col:c+1}      // right
+  ];
+}
+
+// ── New Game ──
+document.getElementById('btnNew').addEventListener('click', () => {
+  initGame();
+});
+
+// ── Board State for Chat ──
+function boardToString() {
+  let s = `Score: Blue=${scores[0]} Red=${scores[1]}. `;
+  s += `Lines: ${claimedLines()}/${totalLines()}. `;
+  s += `Boxes remaining: ${BOXES*BOXES - scores[0] - scores[1]}.`;
+  return s;
+}
+
+function getGameStatus() {
+  if (gameOver) {
+    if (scores[0] > scores[1]) return 'Player wins';
+    if (scores[1] > scores[0]) return 'AI wins';
+    return 'Draw';
+  }
+  return `Turn: ${turn === 0 ? 'Player' : 'AI'}, Score: ${scores[0]}-${scores[1]}`;
+}
+
+// ── Chat ──
+const chatMessages = document.getElementById('chatMessages');
+const chatInput = document.getElementById('chatInput');
+const chatSend = document.getElementById('chatSend');
+let chatBusy = false;
+let chatSessionId = 'session-' + Date.now();
+
+function showChat(show) {
+  document.getElementById('chatPanel').classList.toggle('visible', show);
+  document.getElementById('chatSpacer').style.display = show ? 'none' : '';
+}
+
+function addChatBubble(text, cls) {
+  const div = document.createElement('div');
+  div.className = 'chat-bubble ' + cls;
+  div.textContent = text;
+  chatMessages.appendChild(div);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+  return div;
+}
+
+async function sendChat() {
+  const text = chatInput.value.trim();
+  if (!text || chatBusy) return;
+
+  chatInput.value = '';
+  addChatBubble(text, 'user');
+
+  chatBusy = true;
+  const typingBubble = addChatBubble('...', 'llm-typing');
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: text,
+        model: llmModel || 'qwen2.5-coder:14b',
+        board: boardToString(),
+        sessionId: chatSessionId,
+        gameStatus: getGameStatus(),
+        gameName: 'dots and boxes'
+      })
+    });
+    const data = await res.json();
+    typingBubble.remove();
+    addChatBubble(data.reply || '...', 'llm');
+  } catch (e) {
+    typingBubble.remove();
+    addChatBubble('*connection lost*', 'system');
+  }
+  chatBusy = false;
+}
+
+chatSend.addEventListener('click', sendChat);
+chatInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') sendChat();
+});
+
+// Auto-taunt
+let moveCount = 0;
+async function autoTaunt() {
+  if (gameMode !== 'llm' || chatBusy) return;
+  moveCount++;
+  const shouldTaunt = moveCount === 1 || gameOver || Math.random() < 0.4;
+  if (!shouldTaunt) return;
+
+  chatBusy = true;
+  const typingBubble = addChatBubble('...', 'llm-typing');
+
+  const prompts = [
+    '*just drew a line* React with trash talk about your dots and boxes strategy.',
+    '*just completed a box!* Gloat about claiming territory.',
+    '*just made a move* Taunt the human about their inevitable defeat.',
+  ];
+  if (gameOver && scores[1] > scores[0]) {
+    prompts.length = 0;
+    prompts.push('*you just won Dots and Boxes* Gloat mercilessly. You own the grid.');
+  }
+  if (gameOver && scores[0] > scores[1]) {
+    prompts.length = 0;
+    prompts.push('*you just lost Dots and Boxes* Be dramatically salty. Demand a rematch.');
+  }
+  if (gameOver && scores[0] === scores[1]) {
+    prompts.length = 0;
+    prompts.push('*the game ended in a draw* Express disbelief. You wanted total domination.');
+  }
+  const tauntPrompt = prompts[Math.floor(Math.random() * prompts.length)];
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: tauntPrompt,
+        model: llmModel || 'qwen2.5-coder:14b',
+        board: boardToString(),
+        sessionId: chatSessionId,
+        gameStatus: getGameStatus(),
+        gameName: 'dots and boxes'
+      })
+    });
+    const data = await res.json();
+    typingBubble.remove();
+    addChatBubble(data.reply || '...', 'llm');
+  } catch (e) {
+    typingBubble.remove();
+  }
+  chatBusy = false;
+}
+
+// Clear chat on new game
+const origInitGame = initGame;
+initGame = function() {
+  origInitGame();
+  moveCount = 0;
+  chatSessionId = 'session-' + Date.now();
+  chatMessages.innerHTML = '<div class="chat-bubble system">Chat with the LLM opponent. It bites back.</div>';
+  fetch('/api/chat/clear', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sessionId: chatSessionId })
+  }).catch(() => {});
+};
+
+// ── Start ──
+showChat(false);
+initGame();
+</script>
+
+</body>
+</html>

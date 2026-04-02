@@ -1,0 +1,1154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2048</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@400;500;600;700&display=swap');
+
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+
+  :root {
+    --bg: #0e1010;
+    --surface: #151817;
+    --surface-2: #1a1c1e;
+    --border: #2a2d2a;
+    --accent: #edc53f;
+    --accent-dim: #9a8a2a;
+    --cream: #d8d4c8;
+    --cream-dim: #7a7868;
+  }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: var(--bg);
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    overflow: hidden;
+  }
+
+  body {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: max(20px, calc(50vh - 320px));
+    background:
+      radial-gradient(ellipse at 30% 20%, rgba(237,197,63,0.04) 0%, transparent 60%),
+      radial-gradient(ellipse at 70% 80%, rgba(180,140,30,0.03) 0%, transparent 60%),
+      var(--bg);
+  }
+
+  .game-container {
+    display: flex;
+    gap: 30px;
+    align-items: flex-start;
+    user-select: none;
+  }
+
+  .board-frame {
+    position: relative;
+    flex-shrink: 0;
+    padding: 18px;
+    background: linear-gradient(145deg, #1a1e1a, #0e1010, #181c18);
+    border-radius: 8px;
+    box-shadow:
+      0 2px 4px rgba(0,0,0,0.4),
+      0 8px 24px rgba(0,0,0,0.5),
+      0 20px 60px rgba(0,0,0,0.4),
+      inset 0 1px 0 rgba(237,197,63,0.06);
+  }
+
+  .board-frame::before {
+    content: '';
+    position: absolute;
+    inset: 4px;
+    border: 1px solid rgba(237,197,63,0.1);
+    border-radius: 6px;
+    pointer-events: none;
+  }
+
+  canvas {
+    display: block;
+    border-radius: 3px;
+    cursor: pointer;
+  }
+
+  .sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 220px;
+    flex-shrink: 0;
+  }
+
+  .back-link {
+    font-size: 12px;
+    color: var(--cream-dim);
+    text-decoration: none;
+    letter-spacing: 1px;
+    transition: color 0.2s;
+  }
+  .back-link:hover { color: var(--accent); }
+
+  .game-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    line-height: 1;
+  }
+  .game-title span {
+    display: block;
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--cream-dim);
+    letter-spacing: 6px;
+    margin-top: 4px;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  /* -- Mode Selector -- */
+  .mode-panel {
+    padding: 14px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .mode-panel h3 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent-dim);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 10px;
+  }
+  .mode-toggle {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+  .mode-btn {
+    flex: 1;
+    padding: 8px 6px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--cream-dim);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+  }
+  .mode-btn:hover {
+    border-color: var(--accent-dim);
+    color: var(--cream);
+  }
+  .mode-btn.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(237,197,63,0.08);
+  }
+  .llm-section {
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    transition: max-height 0.3s ease, opacity 0.25s ease, margin-top 0.3s ease;
+    margin-top: 0;
+  }
+  .llm-section.visible {
+    max-height: 120px;
+    opacity: 1;
+    margin-top: 10px;
+  }
+  .llm-label {
+    font-size: 11px;
+    color: var(--cream-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+  }
+
+  .model-select {
+    width: 100%;
+    padding: 7px 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    cursor: pointer;
+    outline: none;
+  }
+  .model-select:focus {
+    border-color: var(--accent-dim);
+  }
+
+  /* -- Score Panel -- */
+  .score-panel {
+    display: flex;
+    gap: 10px;
+  }
+  .score-box {
+    flex: 1;
+    padding: 12px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    text-align: center;
+  }
+  .score-label {
+    font-size: 10px;
+    color: var(--cream-dim);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 4px;
+  }
+  .score-value {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+
+  .status-msg {
+    padding: 14px 18px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--cream-dim);
+    line-height: 1.5;
+    height: 67px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    transition: all 0.3s;
+  }
+  .status-msg.winner {
+    border-color: var(--accent);
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .btn-row {
+    display: flex;
+    gap: 8px;
+  }
+
+  .btn-new, .btn-undo {
+    flex: 1;
+    padding: 12px 14px;
+    background: transparent;
+    border: 1px solid var(--accent-dim);
+    border-radius: 6px;
+    color: var(--accent);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-new:hover, .btn-undo:hover {
+    background: rgba(237,197,63,0.1);
+    border-color: var(--accent);
+  }
+  .btn-undo:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+
+  /* Thinking dots */
+  @keyframes dotPulse {
+    0%, 80%, 100% { opacity: 0.2; }
+    40% { opacity: 1; }
+  }
+  .thinking-dots span {
+    animation: dotPulse 1.4s infinite;
+    font-size: 18px;
+    letter-spacing: 2px;
+  }
+  .thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+  /* -- Chat Panel -- */
+  .chat-spacer {
+    width: 220px;
+    flex-shrink: 0;
+  }
+  .chat-panel {
+    display: none;
+    flex-direction: column;
+    width: 340px;
+    flex-shrink: 0;
+    height: 612px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .chat-panel.visible { display: flex; }
+
+  .chat-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent-dim);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    flex-shrink: 0;
+  }
+
+  .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .chat-bubble {
+    max-width: 85%;
+    padding: 8px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    line-height: 1.45;
+    word-wrap: break-word;
+    animation: fadeIn 0.2s ease;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .chat-bubble.user {
+    align-self: flex-end;
+    background: rgba(237,197,63,0.15);
+    color: var(--cream);
+    border-bottom-right-radius: 4px;
+  }
+  .chat-bubble.llm {
+    align-self: flex-start;
+    background: rgba(204,102,68,0.15);
+    color: var(--cream);
+    border-bottom-left-radius: 4px;
+  }
+  .chat-bubble.system {
+    align-self: center;
+    background: transparent;
+    color: var(--cream-dim);
+    font-size: 11px;
+    font-style: italic;
+    padding: 4px 8px;
+  }
+  .chat-bubble.llm-typing {
+    align-self: flex-start;
+    background: rgba(204,102,68,0.1);
+    color: var(--cream-dim);
+    border-bottom-left-radius: 4px;
+  }
+
+  .chat-input-row {
+    display: flex;
+    gap: 6px;
+    padding: 10px 12px;
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .chat-input {
+    flex: 1;
+    padding: 8px 10px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .chat-input:focus { border-color: var(--accent-dim); }
+  .chat-input::placeholder { color: var(--cream-dim); opacity: 0.5; }
+
+  .chat-send {
+    padding: 8px 14px;
+    background: rgba(204,102,68,0.2);
+    border: 1px solid rgba(204,102,68,0.3);
+    border-radius: 6px;
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .chat-send:hover {
+    background: rgba(204,102,68,0.3);
+    border-color: #cc6644;
+  }
+
+  @media (max-width: 1000px) {
+    .game-container { flex-direction: column; gap: 20px; }
+    .sidebar { flex-direction: row; flex-wrap: wrap; min-width: unset; width: auto !important; }
+    .sidebar > * { flex: 1; min-width: 140px; }
+    .chat-panel { width: 100%; height: 300px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="game-container">
+  <div class="sidebar">
+    <div>
+      <a href="index.html" class="back-link">&larr; Back</a>
+      <div class="game-title" style="margin-top:6px">2048<span>Tile Puzzle</span></div>
+    </div>
+
+    <div class="mode-panel">
+      <h3>Game Mode</h3>
+      <div class="mode-toggle">
+        <button class="mode-btn active" data-mode="solo" id="btnSolo">Solo</button>
+        <button class="mode-btn" data-mode="llm" id="btnLLM">vs LLM</button>
+      </div>
+      <div class="llm-section" id="llmSection">
+        <div class="llm-label">Ollama Model</div>
+        <select id="modelSelect" class="model-select">
+          <option>Loading models...</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="score-panel">
+      <div class="score-box">
+        <div class="score-label">Score</div>
+        <div class="score-value" id="scoreDisplay">0</div>
+      </div>
+      <div class="score-box">
+        <div class="score-label">Best</div>
+        <div class="score-value" id="bestDisplay">0</div>
+      </div>
+    </div>
+
+    <div class="status-msg" id="statusMsg">Use arrow keys or swipe to merge tiles.</div>
+
+    <div class="btn-row">
+      <button class="btn-new" id="btnNew">New Game</button>
+      <button class="btn-undo" id="btnUndo" disabled>Undo</button>
+    </div>
+  </div>
+
+  <div class="board-frame">
+    <canvas id="board"></canvas>
+  </div>
+
+  <div class="chat-panel" id="chatPanel">
+    <div class="chat-header">Commentary</div>
+    <div class="chat-messages" id="chatMessages">
+      <div class="chat-bubble system">LLM will comment on your moves.</div>
+    </div>
+    <div class="chat-input-row">
+      <input type="text" class="chat-input" id="chatInput" placeholder="Say something..." maxlength="200" autocomplete="off">
+      <button class="chat-send" id="chatSend">Send</button>
+    </div>
+  </div>
+  <div class="chat-spacer" id="chatSpacer"></div>
+</div>
+
+<script>
+// ── Constants ──
+const GRID = 4;
+const CELL = 100;
+const GAP = 12;
+const BOARD_PAD = 12;
+const CANVAS_SIZE = BOARD_PAD * 2 + GRID * CELL + (GRID - 1) * GAP;
+const ROUND = 8;
+const TILE_ROUND = 6;
+
+const TILE_COLORS = {
+  2:    { bg: '#eee4da', fg: '#776e65' },
+  4:    { bg: '#ede0c8', fg: '#776e65' },
+  8:    { bg: '#f2b179', fg: '#f9f6f2' },
+  16:   { bg: '#f59563', fg: '#f9f6f2' },
+  32:   { bg: '#f67c5f', fg: '#f9f6f2' },
+  64:   { bg: '#f65e3b', fg: '#f9f6f2' },
+  128:  { bg: '#edcf72', fg: '#f9f6f2' },
+  256:  { bg: '#edcc61', fg: '#f9f6f2' },
+  512:  { bg: '#edc850', fg: '#f9f6f2' },
+  1024: { bg: '#edc53f', fg: '#f9f6f2' },
+  2048: { bg: '#edc22e', fg: '#f9f6f2' },
+};
+
+function tileColor(val) {
+  if (TILE_COLORS[val]) return TILE_COLORS[val];
+  return { bg: '#3c3a32', fg: '#f9f6f2' };
+}
+
+function tileFont(val) {
+  if (val < 100) return 'bold 38px "DM Sans", sans-serif';
+  if (val < 1000) return 'bold 30px "DM Sans", sans-serif';
+  if (val < 10000) return 'bold 24px "DM Sans", sans-serif';
+  return 'bold 18px "DM Sans", sans-serif';
+}
+
+// ── Audio ──
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx;
+function ensureAudio() { if (!audioCtx) audioCtx = new AudioCtx(); }
+
+function playSound(type) {
+  ensureAudio();
+  const actx = audioCtx;
+  const now = actx.currentTime;
+  const g = actx.createGain();
+  g.connect(actx.destination);
+
+  if (type === 'slide') {
+    // Whoosh
+    const noise = actx.createBufferSource();
+    const buf = actx.createBuffer(1, actx.sampleRate * 0.1, actx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * 0.15;
+    noise.buffer = buf;
+    const filt = actx.createBiquadFilter();
+    filt.type = 'bandpass';
+    filt.frequency.setValueAtTime(2000, now);
+    filt.frequency.exponentialRampToValueAtTime(500, now + 0.1);
+    filt.Q.value = 1.5;
+    g.gain.setValueAtTime(0.06, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+    noise.connect(filt);
+    filt.connect(g);
+    noise.start(now);
+    noise.stop(now + 0.12);
+  } else if (type === 'merge') {
+    const o = actx.createOscillator();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(600, now);
+    o.frequency.exponentialRampToValueAtTime(1200, now + 0.08);
+    g.gain.setValueAtTime(0.1, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+    o.connect(g);
+    o.start(now);
+    o.stop(now + 0.15);
+  } else if (type === 'gameover') {
+    const o = actx.createOscillator();
+    o.type = 'triangle';
+    o.frequency.setValueAtTime(400, now);
+    o.frequency.exponentialRampToValueAtTime(150, now + 0.5);
+    g.gain.setValueAtTime(0.1, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
+    o.connect(g);
+    o.start(now);
+    o.stop(now + 0.55);
+  } else if (type === 'win') {
+    [0, 0.12, 0.24, 0.36].forEach((t, i) => {
+      const o = actx.createOscillator();
+      const g2 = actx.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime([523, 659, 784, 1047][i], now + t);
+      g2.gain.setValueAtTime(0.08, now + t);
+      g2.gain.exponentialRampToValueAtTime(0.001, now + t + 0.15);
+      o.connect(g2);
+      g2.connect(actx.destination);
+      o.start(now + t);
+      o.stop(now + t + 0.15);
+    });
+  }
+}
+
+// ── Canvas ──
+const canvas = document.getElementById('board');
+const ctx = canvas.getContext('2d');
+canvas.width = CANVAS_SIZE;
+canvas.height = CANVAS_SIZE;
+
+// ── Game State ──
+let grid = [];
+let score = 0;
+let bestScore = parseInt(localStorage.getItem('2048_best') || '0');
+let gameOver = false;
+let won = false;
+let keepPlaying = false;
+let prevState = null; // for undo
+
+// Animation state
+let animations = []; // {r, c, fromR, fromC, progress, type:'slide'|'spawn'|'merge', value}
+let animating = false;
+const ANIM_DURATION = 120; // ms for slides
+const SPAWN_DURATION = 150;
+const MERGE_DURATION = 150;
+
+// Mode
+let gameMode = 'solo';
+let llmModel = '';
+
+// Move counter for auto-comment
+let moveCount = 0;
+let highestMerge = 0;
+
+function cellX(c) { return BOARD_PAD + c * (CELL + GAP); }
+function cellY(r) { return BOARD_PAD + r * (CELL + GAP); }
+
+function initGame() {
+  grid = Array.from({ length: GRID }, () => Array(GRID).fill(0));
+  score = 0;
+  gameOver = false;
+  won = false;
+  keepPlaying = false;
+  prevState = null;
+  animations = [];
+  animating = false;
+  moveCount = 0;
+  highestMerge = 0;
+  addRandomTile();
+  addRandomTile();
+  updateUI();
+  draw();
+}
+
+function addRandomTile() {
+  const empties = [];
+  for (let r = 0; r < GRID; r++)
+    for (let c = 0; c < GRID; c++)
+      if (grid[r][c] === 0) empties.push({ r, c });
+  if (empties.length === 0) return null;
+  const cell = empties[Math.floor(Math.random() * empties.length)];
+  const val = Math.random() < 0.9 ? 2 : 4;
+  grid[cell.r][cell.c] = val;
+  return { r: cell.r, c: cell.c, val };
+}
+
+function saveState() {
+  prevState = {
+    grid: grid.map(row => [...row]),
+    score: score
+  };
+}
+
+function undo() {
+  if (!prevState) return;
+  grid = prevState.grid;
+  score = prevState.score;
+  prevState = null;
+  gameOver = false;
+  won = false;
+  keepPlaying = false;
+  updateUI();
+  draw();
+}
+
+// ── Move Logic ──
+function move(dir) {
+  if (gameOver && !keepPlaying) return false;
+  if (animating) return false;
+
+  saveState();
+
+  let moved = false;
+  let mergedMax = 0;
+  let mergedAny = false;
+  const slideAnims = [];
+  const mergeAnims = [];
+
+  // Build traversal order
+  const vectors = { up: [-1, 0], down: [1, 0], left: [0, -1], right: [0, 1] };
+  const vec = vectors[dir];
+
+  // Process in correct order
+  const rows = [], cols = [];
+  for (let i = 0; i < GRID; i++) { rows.push(i); cols.push(i); }
+  if (vec[0] === 1) rows.reverse(); // down
+  if (vec[1] === 1) cols.reverse(); // right
+
+  const merged = Array.from({ length: GRID }, () => Array(GRID).fill(false));
+
+  for (const r of rows) {
+    for (const c of cols) {
+      if (grid[r][c] === 0) continue;
+      let cr = r, cc = c;
+      // Slide as far as possible
+      while (true) {
+        const nr = cr + vec[0], nc = cc + vec[1];
+        if (nr < 0 || nr >= GRID || nc < 0 || nc >= GRID) break;
+        if (grid[nr][nc] === 0) {
+          grid[nr][nc] = grid[cr][cc];
+          grid[cr][cc] = 0;
+          cr = nr;
+          cc = nc;
+          moved = true;
+        } else if (grid[nr][nc] === grid[cr][cc] && !merged[nr][nc]) {
+          // Merge
+          grid[nr][nc] *= 2;
+          const mergeVal = grid[nr][nc];
+          grid[cr][cc] = 0;
+          merged[nr][nc] = true;
+          score += mergeVal;
+          if (mergeVal > mergedMax) mergedMax = mergeVal;
+          mergedAny = true;
+          moved = true;
+          cr = nr;
+          cc = nc;
+
+          if (mergeVal === 2048 && !won && !keepPlaying) {
+            won = true;
+          }
+          break;
+        } else {
+          break;
+        }
+      }
+      if (cr !== r || cc !== c) {
+        slideAnims.push({ fromR: r, fromC: c, toR: cr, toC: cc, val: grid[cr][cc] });
+      }
+      if (merged[cr][cc]) {
+        mergeAnims.push({ r: cr, c: cc, val: grid[cr][cc] });
+      }
+    }
+  }
+
+  if (!moved) {
+    prevState = null; // nothing to undo
+    return false;
+  }
+
+  // Score update
+  if (score > bestScore) {
+    bestScore = score;
+    localStorage.setItem('2048_best', bestScore);
+  }
+
+  // Sound
+  if (mergedAny) playSound('merge');
+  else playSound('slide');
+
+  // Add new tile
+  const newTile = addRandomTile();
+
+  // Animate
+  animating = true;
+  const startTime = performance.now();
+
+  // Build animation set
+  animations = [];
+  slideAnims.forEach(a => {
+    animations.push({ ...a, type: 'slide', start: startTime, dur: ANIM_DURATION });
+  });
+  mergeAnims.forEach(a => {
+    animations.push({ ...a, type: 'merge', start: startTime, dur: MERGE_DURATION });
+  });
+  if (newTile) {
+    animations.push({
+      r: newTile.r, c: newTile.c, val: newTile.val,
+      type: 'spawn', start: startTime + ANIM_DURATION * 0.8, dur: SPAWN_DURATION
+    });
+  }
+
+  // Run animation loop
+  const animLoop = (now) => {
+    let allDone = true;
+    for (const a of animations) {
+      const elapsed = now - a.start;
+      a.progress = Math.min(1, Math.max(0, elapsed / a.dur));
+      if (a.progress < 1) allDone = false;
+    }
+    draw();
+    if (!allDone) {
+      requestAnimationFrame(animLoop);
+    } else {
+      animations = [];
+      animating = false;
+      draw();
+      checkGameState(mergedMax);
+    }
+  };
+  requestAnimationFrame(animLoop);
+
+  moveCount++;
+  updateUI();
+
+  // LLM auto-comment
+  if (gameMode === 'llm') {
+    if (mergedMax >= 256 || moveCount % 5 === 0) {
+      highestMerge = Math.max(highestMerge, mergedMax);
+      setTimeout(() => autoComment(mergedMax), 500);
+    }
+  }
+
+  return true;
+}
+
+function checkGameState(mergedMax) {
+  if (won && !keepPlaying) {
+    playSound('win');
+    setStatus('You reached 2048! Press New Game or keep playing.', true);
+    keepPlaying = true;
+    if (gameMode === 'llm') setTimeout(() => autoComment(2048), 300);
+    return;
+  }
+
+  // Check game over
+  if (isGameOver()) {
+    gameOver = true;
+    playSound('gameover');
+    setStatus('Game Over! No more moves.', false);
+    if (gameMode === 'llm') setTimeout(() => autoComment(-1), 300);
+    return;
+  }
+}
+
+function isGameOver() {
+  for (let r = 0; r < GRID; r++)
+    for (let c = 0; c < GRID; c++) {
+      if (grid[r][c] === 0) return false;
+      if (c < GRID - 1 && grid[r][c] === grid[r][c + 1]) return false;
+      if (r < GRID - 1 && grid[r][c] === grid[r + 1][c]) return false;
+    }
+  return true;
+}
+
+// ── Drawing ──
+function draw() {
+  ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+
+  // Board background
+  roundRect(ctx, 0, 0, CANVAS_SIZE, CANVAS_SIZE, ROUND, '#1a1c1e');
+
+  // Empty cells
+  for (let r = 0; r < GRID; r++) {
+    for (let c = 0; c < GRID; c++) {
+      const x = cellX(c), y = cellY(r);
+      roundRect(ctx, x, y, CELL, CELL, TILE_ROUND, '#2a2d2a');
+    }
+  }
+
+  // Spawning tiles tracked to skip in grid draw
+  const spawnCells = new Set();
+  const mergeCells = new Set();
+  for (const a of animations) {
+    if (a.type === 'spawn') spawnCells.add(a.r * GRID + a.c);
+    if (a.type === 'merge') mergeCells.add(a.r * GRID + a.c);
+  }
+
+  // Draw non-animating tiles
+  for (let r = 0; r < GRID; r++) {
+    for (let c = 0; c < GRID; c++) {
+      if (grid[r][c] === 0) continue;
+      const key = r * GRID + c;
+      if (spawnCells.has(key) && animations.some(a => a.type === 'spawn' && a.r === r && a.c === c && a.progress < 1)) continue;
+      const x = cellX(c), y = cellY(r);
+      const scale = mergeCells.has(key) ? getMergeScale(r, c) : 1;
+      drawTile(x, y, grid[r][c], scale);
+    }
+  }
+
+  // Draw spawning tiles
+  for (const a of animations) {
+    if (a.type === 'spawn' && a.progress > 0 && a.progress < 1) {
+      const x = cellX(a.c), y = cellY(a.r);
+      const scale = easeOut(a.progress);
+      drawTile(x, y, a.val, scale);
+    }
+  }
+}
+
+function getMergeScale(r, c) {
+  for (const a of animations) {
+    if (a.type === 'merge' && a.r === r && a.c === c) {
+      const t = a.progress;
+      // Pulse: scale up to 1.15 then back to 1
+      if (t < 0.5) return 1 + 0.15 * easeOut(t * 2);
+      return 1 + 0.15 * (1 - easeOut((t - 0.5) * 2));
+    }
+  }
+  return 1;
+}
+
+function easeOut(t) {
+  return 1 - Math.pow(1 - t, 3);
+}
+
+function drawTile(x, y, val, scale) {
+  const col = tileColor(val);
+  ctx.save();
+  if (scale !== 1) {
+    const cx = x + CELL / 2, cy = y + CELL / 2;
+    ctx.translate(cx, cy);
+    ctx.scale(scale, scale);
+    ctx.translate(-cx, -cy);
+  }
+  roundRect(ctx, x, y, CELL, CELL, TILE_ROUND, col.bg);
+  ctx.fillStyle = col.fg;
+  ctx.font = tileFont(val);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(val, x + CELL / 2, y + CELL / 2 + 2);
+  ctx.restore();
+}
+
+function roundRect(ctx, x, y, w, h, r, fill) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+  ctx.fillStyle = fill;
+  ctx.fill();
+}
+
+// ── UI Updates ──
+function updateUI() {
+  document.getElementById('scoreDisplay').textContent = score;
+  document.getElementById('bestDisplay').textContent = bestScore;
+  document.getElementById('btnUndo').disabled = !prevState;
+}
+
+function setStatus(msg, isWin) {
+  const el = document.getElementById('statusMsg');
+  el.textContent = msg;
+  el.className = 'status-msg' + (isWin ? ' winner' : '');
+}
+
+// ── Keyboard Controls ──
+document.addEventListener('keydown', (e) => {
+  const map = {
+    ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right',
+    w: 'up', s: 'down', a: 'left', d: 'right'
+  };
+  const dir = map[e.key];
+  if (dir) {
+    e.preventDefault();
+    move(dir);
+  }
+});
+
+// ── Touch / Swipe ──
+let touchStartX = 0, touchStartY = 0;
+canvas.addEventListener('touchstart', (e) => {
+  const t = e.touches[0];
+  touchStartX = t.clientX;
+  touchStartY = t.clientY;
+}, { passive: true });
+
+canvas.addEventListener('touchend', (e) => {
+  const t = e.changedTouches[0];
+  const dx = t.clientX - touchStartX;
+  const dy = t.clientY - touchStartY;
+  const absDx = Math.abs(dx), absDy = Math.abs(dy);
+  if (Math.max(absDx, absDy) < 30) return; // too short
+  if (absDx > absDy) {
+    move(dx > 0 ? 'right' : 'left');
+  } else {
+    move(dy > 0 ? 'down' : 'up');
+  }
+}, { passive: true });
+
+// ── Mode Switching ──
+document.getElementById('btnSolo').addEventListener('click', () => setMode('solo'));
+document.getElementById('btnLLM').addEventListener('click', () => setMode('llm'));
+
+function setMode(mode) {
+  gameMode = mode;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+  document.getElementById('llmSection').classList.toggle('visible', mode === 'llm');
+  showChat(mode === 'llm');
+  initGame();
+}
+
+// ── Model Loading ──
+async function loadModels() {
+  try {
+    const res = await fetch('/api/models');
+    const data = await res.json();
+    const sel = document.getElementById('modelSelect');
+    sel.innerHTML = '';
+    const models = data.models || data;
+    if (Array.isArray(models)) {
+      models.forEach(m => {
+        const name = m.name || m.id || m;
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        sel.appendChild(opt);
+      });
+      llmModel = sel.value;
+    }
+  } catch (e) {
+    document.getElementById('modelSelect').innerHTML = '<option>No models available</option>';
+  }
+}
+document.getElementById('modelSelect').addEventListener('change', (e) => { llmModel = e.target.value; });
+loadModels();
+
+// ── Buttons ──
+document.getElementById('btnNew').addEventListener('click', () => {
+  initGame();
+  setStatus('Use arrow keys or swipe to merge tiles.', false);
+});
+document.getElementById('btnUndo').addEventListener('click', undo);
+
+// ── Board State for Chat ──
+function boardToString() {
+  let s = '';
+  for (let r = 0; r < GRID; r++) {
+    s += grid[r].map(v => v || '.').join('\t') + '\n';
+  }
+  return s.trim();
+}
+
+function getGameStatus() {
+  if (gameOver) return `Game Over. Score: ${score}`;
+  const maxTile = Math.max(...grid.flat());
+  return `Score: ${score}, Max tile: ${maxTile}, Moves: ${moveCount}`;
+}
+
+// ── Chat ──
+const chatMessages = document.getElementById('chatMessages');
+const chatInput = document.getElementById('chatInput');
+const chatSend = document.getElementById('chatSend');
+let chatBusy = false;
+let chatSessionId = 'session-2048-' + Date.now();
+
+function showChat(show) {
+  document.getElementById('chatPanel').classList.toggle('visible', show);
+  document.getElementById('chatSpacer').style.display = show ? 'none' : '';
+}
+
+function addChatBubble(text, cls) {
+  const div = document.createElement('div');
+  div.className = 'chat-bubble ' + cls;
+  div.textContent = text;
+  chatMessages.appendChild(div);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+  return div;
+}
+
+async function sendChat() {
+  const text = chatInput.value.trim();
+  if (!text || chatBusy) return;
+
+  chatInput.value = '';
+  addChatBubble(text, 'user');
+
+  chatBusy = true;
+  const typingBubble = addChatBubble('...', 'llm-typing');
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: text,
+        model: llmModel || 'qwen2.5-coder:14b',
+        board: boardToString(),
+        sessionId: chatSessionId,
+        gameStatus: getGameStatus(),
+        gameName: '2048'
+      })
+    });
+    const data = await res.json();
+    typingBubble.remove();
+    addChatBubble(data.reply || '...', 'llm');
+  } catch (e) {
+    typingBubble.remove();
+    addChatBubble('*connection lost*', 'system');
+  }
+  chatBusy = false;
+}
+
+chatSend.addEventListener('click', sendChat);
+chatInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') sendChat();
+});
+
+// ── Auto Commentary ──
+async function autoComment(mergedVal) {
+  if (gameMode !== 'llm' || chatBusy) return;
+
+  chatBusy = true;
+  const typingBubble = addChatBubble('...', 'llm-typing');
+
+  let prompt;
+  if (mergedVal === -1) {
+    prompt = '*Game over!* The player scored ' + score + '. React to their final score. Be dramatic.';
+  } else if (mergedVal === 2048) {
+    prompt = '*The player just created a 2048 tile!* Be extremely excited and impressed!';
+  } else if (mergedVal >= 1024) {
+    prompt = '*Just merged to get a ' + mergedVal + ' tile!* Score is ' + score + '. Be amazed and hype them up!';
+  } else if (mergedVal >= 256) {
+    prompt = '*Nice merge to ' + mergedVal + '!* Score: ' + score + '. Show genuine excitement about this big merge.';
+  } else if (gameOver) {
+    prompt = '*Game over, no more moves.* Score: ' + score + '. Give a dramatic post-mortem.';
+  } else {
+    const maxTile = Math.max(...grid.flat());
+    const empties = grid.flat().filter(v => v === 0).length;
+    if (empties <= 3) {
+      prompt = '*Board is getting tight!* Only ' + empties + ' empty cells. Max tile: ' + maxTile + '. Score: ' + score + '. Mock them a bit for running out of space, or encourage.';
+    } else if (maxTile >= 512) {
+      prompt = '*Progress update* Max tile: ' + maxTile + ', Score: ' + score + '. Comment on their strategy - are they doing well?';
+    } else {
+      prompt = '*Move update* Score: ' + score + ', Max tile: ' + maxTile + '. Give brief witty commentary on their 2048 game.';
+    }
+  }
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: prompt,
+        model: llmModel || 'qwen2.5-coder:14b',
+        board: boardToString(),
+        sessionId: chatSessionId,
+        gameStatus: getGameStatus(),
+        gameName: '2048'
+      })
+    });
+    const data = await res.json();
+    typingBubble.remove();
+    addChatBubble(data.reply || '...', 'llm');
+  } catch (e) {
+    typingBubble.remove();
+  }
+  chatBusy = false;
+}
+
+// ── Reset chat on new game ──
+const origInit = initGame;
+initGame = function() {
+  origInit();
+  moveCount = 0;
+  chatSessionId = 'session-2048-' + Date.now();
+  chatMessages.innerHTML = '<div class="chat-bubble system">LLM will comment on your moves.</div>';
+  fetch('/api/chat/clear', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sessionId: chatSessionId })
+  }).catch(() => {});
+};
+
+// ── Start ──
+showChat(false);
+initGame();
+</script>
+
+</body>
+</html>

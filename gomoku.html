@@ -1,0 +1,1670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gomoku</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@400;500;600&display=swap');
+
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+
+  :root {
+    --bg: #12100e;
+    --surface: #1c1914;
+    --surface-2: #241f18;
+    --border: #2e2820;
+    --accent: #8a6a3a;
+    --accent-dim: #6b5028;
+    --gold: #c4a24e;
+    --gold-dim: #8a7233;
+    --cream: #e8dcc8;
+    --cream-dim: #a89878;
+    --board-color: #d4b478;
+    --board-dark: #b89840;
+  }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: var(--bg);
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    overflow: hidden;
+  }
+
+  body {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: max(12px, calc(50vh - 320px));
+    background:
+      radial-gradient(ellipse at 30% 20%, rgba(140,100,40,0.06) 0%, transparent 60%),
+      radial-gradient(ellipse at 70% 80%, rgba(100,60,20,0.05) 0%, transparent 60%),
+      var(--bg);
+  }
+
+  .game-container {
+    display: flex;
+    gap: 30px;
+    align-items: flex-start;
+    user-select: none;
+  }
+
+  .board-frame {
+    position: relative;
+    flex-shrink: 0;
+    padding: 16px;
+    background: linear-gradient(145deg, #c4a858, #b89840, #c4a858);
+    border-radius: 8px;
+    box-shadow:
+      0 2px 4px rgba(0,0,0,0.4),
+      0 8px 24px rgba(0,0,0,0.5),
+      0 20px 60px rgba(0,0,0,0.4),
+      inset 0 1px 0 rgba(255,255,255,0.15);
+  }
+
+  .board-frame::before {
+    content: '';
+    position: absolute;
+    inset: 4px;
+    border: 1px solid rgba(255,240,180,0.2);
+    border-radius: 6px;
+    pointer-events: none;
+  }
+
+  canvas {
+    display: block;
+    border-radius: 3px;
+    cursor: pointer;
+  }
+
+  .sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 220px;
+    flex-shrink: 0;
+  }
+
+  .back-link {
+    font-size: 12px;
+    color: var(--gold-dim);
+    text-decoration: none;
+    letter-spacing: 1px;
+    transition: color 0.2s;
+  }
+  .back-link:hover { color: var(--gold); }
+
+  .game-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--gold);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    line-height: 1;
+  }
+  .game-title span {
+    display: block;
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--cream-dim);
+    letter-spacing: 6px;
+    margin-top: 4px;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  /* ── Mode Selector ── */
+  .mode-panel {
+    padding: 14px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .mode-panel h3 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--gold-dim);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 10px;
+  }
+  .mode-toggle {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+  .mode-btn {
+    flex: 1;
+    padding: 8px 6px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--cream-dim);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+  }
+  .mode-btn:hover {
+    border-color: var(--gold-dim);
+    color: var(--cream);
+  }
+  .mode-btn.active {
+    border-color: var(--gold);
+    color: var(--gold);
+    background: rgba(196,162,78,0.08);
+  }
+  .diff-section {
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    transition: max-height 0.3s ease, opacity 0.25s ease, margin-top 0.3s ease;
+    margin-top: 0;
+  }
+  .diff-section.visible {
+    max-height: 120px;
+    opacity: 1;
+    margin-top: 10px;
+  }
+  .diff-label {
+    font-size: 11px;
+    color: var(--cream-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+  }
+  .diff-btns {
+    display: flex;
+    gap: 6px;
+  }
+  .diff-btn {
+    flex: 1;
+    padding: 7px 4px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--cream-dim);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+  }
+  .diff-btn:hover {
+    border-color: var(--gold-dim);
+    color: var(--cream);
+  }
+  .diff-btn.active {
+    border-color: var(--gold);
+    color: var(--gold);
+    background: rgba(196,162,78,0.08);
+  }
+
+  .model-select {
+    width: 100%;
+    padding: 7px 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    cursor: pointer;
+    outline: none;
+  }
+  .model-select:focus {
+    border-color: var(--gold-dim);
+  }
+
+  .turn-indicator {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    transition: border-color 0.3s;
+  }
+  .turn-indicator.active-black { border-color: #555; }
+  .turn-indicator.active-white { border-color: #ccc; }
+
+  .turn-disc {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+  }
+  .turn-disc.black-stone { background: radial-gradient(circle at 35% 35%, #555, #1a1a1a 70%); }
+  .turn-disc.white-stone { background: radial-gradient(circle at 35% 35%, #fff, #bbb 70%); }
+
+  .turn-text {
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .turn-label {
+    font-size: 11px;
+    color: var(--cream-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .score-panel {
+    padding: 16px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .score-panel h3 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--gold-dim);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+  }
+  .score-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+  }
+  .score-row + .score-row { border-top: 1px solid var(--border); }
+  .score-label { font-size: 13px; color: var(--cream-dim); }
+  .score-value { font-family: 'Cormorant Garamond', serif; font-size: 20px; font-weight: 700; }
+  .score-value.black-val { color: #bbb; }
+  .score-value.white-val { color: #eee; }
+
+  .status-msg {
+    padding: 14px 18px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--cream-dim);
+    line-height: 1.5;
+    height: 67px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    transition: all 0.3s;
+  }
+  .status-msg.winner {
+    border-color: var(--gold);
+    color: var(--gold);
+    font-weight: 600;
+  }
+  .status-msg.thinking {
+    border-color: #888;
+    color: var(--cream-dim);
+  }
+
+  .btn-new {
+    padding: 12px 20px;
+    background: transparent;
+    border: 1px solid var(--gold-dim);
+    border-radius: 6px;
+    color: var(--gold);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    width: 100%;
+  }
+  .btn-new:hover {
+    background: rgba(196,162,78,0.1);
+    border-color: var(--gold);
+  }
+
+  /* Thinking dots animation */
+  @keyframes dotPulse {
+    0%, 80%, 100% { opacity: 0.2; }
+    40% { opacity: 1; }
+  }
+  .thinking-dots span {
+    animation: dotPulse 1.4s infinite;
+    font-size: 18px;
+    letter-spacing: 2px;
+  }
+  .thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+  /* ── Chat Panel ── */
+  .chat-spacer {
+    width: 220px;
+    flex-shrink: 0;
+  }
+  .chat-panel {
+    display: none;
+    flex-direction: column;
+    width: 340px;
+    flex-shrink: 0;
+    height: 590px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .chat-panel.visible { display: flex; }
+
+  .chat-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--gold-dim);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    flex-shrink: 0;
+  }
+
+  .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .chat-bubble {
+    max-width: 85%;
+    padding: 8px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    line-height: 1.45;
+    word-wrap: break-word;
+    animation: fadeIn 0.2s ease;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .chat-bubble.user {
+    align-self: flex-end;
+    background: rgba(196,162,78,0.15);
+    color: var(--cream);
+    border-bottom-right-radius: 4px;
+  }
+  .chat-bubble.llm {
+    align-self: flex-start;
+    background: rgba(180,180,180,0.15);
+    color: var(--cream);
+    border-bottom-left-radius: 4px;
+  }
+  .chat-bubble.system {
+    align-self: center;
+    background: transparent;
+    color: var(--cream-dim);
+    font-size: 11px;
+    font-style: italic;
+    padding: 4px 8px;
+  }
+  .chat-bubble.llm-typing {
+    align-self: flex-start;
+    background: rgba(180,180,180,0.1);
+    color: var(--cream-dim);
+    border-bottom-left-radius: 4px;
+  }
+
+  .chat-input-row {
+    display: flex;
+    gap: 6px;
+    padding: 10px 12px;
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .chat-input {
+    flex: 1;
+    padding: 8px 10px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .chat-input:focus { border-color: var(--gold-dim); }
+  .chat-input::placeholder { color: var(--cream-dim); opacity: 0.5; }
+
+  .chat-send {
+    padding: 8px 14px;
+    background: rgba(180,180,180,0.2);
+    border: 1px solid rgba(180,180,180,0.3);
+    border-radius: 6px;
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .chat-send:hover {
+    background: rgba(180,180,180,0.3);
+    border-color: #ccc;
+  }
+
+  @media (max-width: 1000px) {
+    .game-container { flex-direction: column; gap: 20px; }
+    .sidebar { flex-direction: row; flex-wrap: wrap; min-width: unset; width: auto !important; }
+    .sidebar > * { flex: 1; min-width: 140px; }
+    .chat-panel { width: 100%; height: 300px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="game-container">
+  <div class="sidebar">
+    <div>
+      <a href="index.html" class="back-link">&larr; Back</a>
+      <div class="game-title" style="margin-top:6px">Gomoku<span>Five in a Row</span></div>
+    </div>
+
+    <div class="mode-panel">
+      <h3>Game Mode</h3>
+      <div class="mode-toggle">
+        <button class="mode-btn active" data-mode="1p" id="btn1P">1 Player</button>
+        <button class="mode-btn" data-mode="llm" id="btnLLM">vs LLM</button>
+        <button class="mode-btn" data-mode="2p" id="btn2P">2 Player</button>
+      </div>
+      <div class="diff-section visible" id="diffSection">
+        <div class="diff-label">Difficulty</div>
+        <div class="diff-btns">
+          <button class="diff-btn" data-diff="1" id="diffEasy">Easy</button>
+          <button class="diff-btn active" data-diff="2" id="diffMedium">Medium</button>
+          <button class="diff-btn" data-diff="3" id="diffHard">Hard</button>
+        </div>
+      </div>
+      <div class="diff-section" id="llmSection">
+        <div class="diff-label">Ollama Model</div>
+        <select id="modelSelect" class="model-select">
+          <option>Loading models...</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="turn-indicator" id="turnIndicator">
+      <div class="turn-disc black-stone" id="turnDisc"></div>
+      <div>
+        <div class="turn-label">Current Turn</div>
+        <div class="turn-text" id="turnText">Black moves</div>
+      </div>
+    </div>
+
+    <div class="score-panel">
+      <h3>Score</h3>
+      <div class="score-row">
+        <span class="score-label">Black <small style="opacity:0.5" id="youLabel">(you)</small></span>
+        <span class="score-value black-val" id="scoreBlack">0</span>
+      </div>
+      <div class="score-row">
+        <span class="score-label">White <small style="opacity:0.5" id="cpuLabel">(cpu)</small></span>
+        <span class="score-value white-val" id="scoreWhite">0</span>
+      </div>
+    </div>
+
+    <div class="status-msg" id="statusMsg">Place a stone to begin.</div>
+
+    <button class="btn-new" id="btnNew">New Game</button>
+  </div>
+
+  <div class="board-frame">
+    <canvas id="board"></canvas>
+  </div>
+
+  <div class="chat-panel" id="chatPanel">
+    <div class="chat-header">Trash Talk</div>
+    <div class="chat-messages" id="chatMessages">
+      <div class="chat-bubble system">Chat with the LLM opponent. It bites back.</div>
+    </div>
+    <div class="chat-input-row">
+      <input type="text" class="chat-input" id="chatInput" placeholder="Talk trash..." maxlength="200" autocomplete="off">
+      <button class="chat-send" id="chatSend">Send</button>
+    </div>
+  </div>
+  <div class="chat-spacer" id="chatSpacer"></div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// ── CONSTANTS ──
+// ══════════════════════════════════════════════════════════════
+const EMPTY = 0, BLACK = 1, WHITE = 2;
+const SIZE = 15;
+const SPACING = 38;
+const MARGIN = 26;
+const BOARD_PX = MARGIN * 2 + SPACING * (SIZE - 1);
+
+// Standard star points for 15x15
+const STAR_POINTS = [[3,3],[3,7],[3,11],[7,3],[7,7],[7,11],[11,3],[11,7],[11,11]];
+
+// ══════════════════════════════════════════════════════════════
+// ── AUDIO ──
+// ══════════════════════════════════════════════════════════════
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx;
+function ensureAudio() { if (!audioCtx) audioCtx = new AudioCtx(); }
+
+function playSound(type) {
+  ensureAudio();
+  const actx = audioCtx;
+  const now = actx.currentTime;
+  const g = actx.createGain();
+  g.connect(actx.destination);
+
+  if (type === 'place') {
+    const buf = actx.createBuffer(1, actx.sampleRate * 0.06, actx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) {
+      const t = i / actx.sampleRate;
+      data[i] = (Math.random() * 2 - 1) * Math.exp(-t * 80) * 0.3;
+    }
+    const src = actx.createBufferSource();
+    src.buffer = buf;
+    const bp = actx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.value = 2200;
+    bp.Q.value = 2;
+    src.connect(bp);
+    bp.connect(g);
+    g.gain.setValueAtTime(0.25, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+    src.start(now);
+  } else if (type === 'win') {
+    [392, 494, 587, 784].forEach((f, i) => {
+      const o = actx.createOscillator();
+      const gg = actx.createGain();
+      o.type = 'sine'; o.frequency.value = f;
+      gg.gain.setValueAtTime(0, now + i * 0.12);
+      gg.gain.linearRampToValueAtTime(0.08, now + i * 0.12 + 0.03);
+      gg.gain.exponentialRampToValueAtTime(0.001, now + i * 0.12 + 0.3);
+      o.connect(gg); gg.connect(actx.destination);
+      o.start(now + i * 0.12); o.stop(now + i * 0.12 + 0.3);
+    });
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// ── CANVAS SETUP ──
+// ══════════════════════════════════════════════════════════════
+const canvas = document.getElementById('board');
+const ctx = canvas.getContext('2d');
+canvas.width = BOARD_PX;
+canvas.height = BOARD_PX;
+canvas.style.width = BOARD_PX + 'px';
+canvas.style.height = BOARD_PX + 'px';
+
+// ══════════════════════════════════════════════════════════════
+// ── GAME STATE ──
+// ══════════════════════════════════════════════════════════════
+let board;
+let turn;
+let gameOver;
+let lastMove;
+let winLine; // array of {r,c} for winning 5
+let moveCount;
+let aiThinking = false;
+let hoverCell = null;
+let winsBlack = 0, winsWhite = 0;
+
+// ── Mode & Difficulty ──
+let gameMode = '1p';
+let difficulty = 2;
+let llmModel = '';
+const AI_SIDE = WHITE;
+const HUMAN_SIDE = BLACK;
+
+// ── Mode UI ──
+document.getElementById('btn1P').addEventListener('click', () => setMode('1p'));
+document.getElementById('btn2P').addEventListener('click', () => setMode('2p'));
+document.getElementById('btnLLM').addEventListener('click', () => setMode('llm'));
+document.getElementById('diffEasy').addEventListener('click', () => setDifficulty(1));
+document.getElementById('diffMedium').addEventListener('click', () => setDifficulty(2));
+document.getElementById('diffHard').addEventListener('click', () => setDifficulty(3));
+
+function setMode(m) {
+  gameMode = m;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === m));
+  document.getElementById('diffSection').classList.toggle('visible', m === '1p' || m === 'llm');
+  document.getElementById('llmSection').classList.toggle('visible', m === 'llm');
+  const isSingle = m === '1p' || m === 'llm';
+  document.getElementById('youLabel').style.display = isSingle ? '' : 'none';
+  const cpuLabel = document.getElementById('cpuLabel');
+  cpuLabel.style.display = isSingle ? '' : 'none';
+  cpuLabel.textContent = m === 'llm' ? '(llm)' : '(cpu)';
+  if (m === 'llm') loadModels();
+  showChat(m === 'llm');
+  initGame();
+}
+
+function setDifficulty(d) {
+  difficulty = d;
+  document.querySelectorAll('.diff-btn').forEach(b => b.classList.toggle('active', +b.dataset.diff === d));
+  initGame();
+}
+
+// ── Ollama Model Loading ──
+async function loadModels() {
+  const sel = document.getElementById('modelSelect');
+  try {
+    const res = await fetch('/api/models');
+    const data = await res.json();
+    if (data.models && data.models.length > 0) {
+      sel.innerHTML = '';
+      data.models.forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        sel.appendChild(opt);
+      });
+      const preferred = data.models.find(m => m.includes('coder:14b')) || data.models[0];
+      sel.value = preferred;
+      llmModel = preferred;
+    }
+  } catch (e) {
+    sel.innerHTML = '<option>Connection error</option>';
+  }
+}
+document.getElementById('modelSelect').addEventListener('change', (e) => {
+  llmModel = e.target.value;
+});
+
+// ══════════════════════════════════════════════════════════════
+// ── GOMOKU LOGIC ──
+// ══════════════════════════════════════════════════════════════
+const DIRS = [[0,1],[1,0],[1,1],[1,-1]]; // horizontal, vertical, diag-down-right, diag-down-left
+
+function inBounds(r, c) { return r >= 0 && r < SIZE && c >= 0 && c < SIZE; }
+
+// Check if placing at (r,c) for `color` creates exactly 5 in a row
+// Returns the winning line or null
+function checkWinAt(boardState, r, c, color) {
+  for (const [dr, dc] of DIRS) {
+    const line = [{r, c}];
+    // Count forward
+    for (let i = 1; i < SIZE; i++) {
+      const nr = r + dr * i, nc = c + dc * i;
+      if (!inBounds(nr, nc) || boardState[nr][nc] !== color) break;
+      line.push({r: nr, c: nc});
+    }
+    // Count backward
+    for (let i = 1; i < SIZE; i++) {
+      const nr = r - dr * i, nc = c - dc * i;
+      if (!inBounds(nr, nc) || boardState[nr][nc] !== color) break;
+      line.push({r: nr, c: nc});
+    }
+    if (line.length >= 5) return line.slice(0, 5);
+  }
+  return null;
+}
+
+// Check entire board for any winner
+function findWinner(boardState) {
+  for (let r = 0; r < SIZE; r++) {
+    for (let c = 0; c < SIZE; c++) {
+      if (boardState[r][c] === EMPTY) continue;
+      const win = checkWinAt(boardState, r, c, boardState[r][c]);
+      if (win) return { color: boardState[r][c], line: win };
+    }
+  }
+  return null;
+}
+
+function isBoardFull(boardState) {
+  for (let r = 0; r < SIZE; r++)
+    for (let c = 0; c < SIZE; c++)
+      if (boardState[r][c] === EMPTY) return false;
+  return true;
+}
+
+// ══════════════════════════════════════════════════════════════
+// ── INIT ──
+// ══════════════════════════════════════════════════════════════
+function initGame() {
+  board = Array.from({length: SIZE}, () => Array(SIZE).fill(EMPTY));
+  turn = BLACK;
+  gameOver = false;
+  lastMove = null;
+  winLine = null;
+  moveCount = 0;
+  aiThinking = false;
+  hoverCell = null;
+  updateUI();
+  draw();
+}
+
+// ══════════════════════════════════════════════════════════════
+// ── PLACE STONE ──
+// ══════════════════════════════════════════════════════════════
+function placeStone(r, c) {
+  if (gameOver || board[r][c] !== EMPTY) return false;
+
+  board[r][c] = turn;
+  lastMove = {r, c};
+  moveCount++;
+  playSound('place');
+
+  // Check win
+  const win = checkWinAt(board, r, c, turn);
+  if (win) {
+    winLine = win;
+    gameOver = true;
+    if (turn === BLACK) winsBlack++;
+    else winsWhite++;
+    playSound('win');
+    turn = turn; // keep turn for display
+    updateUI();
+    draw();
+    return true;
+  }
+
+  // Check draw
+  if (isBoardFull(board)) {
+    gameOver = true;
+    updateUI();
+    draw();
+    return true;
+  }
+
+  turn = turn === BLACK ? WHITE : BLACK;
+  updateUI();
+  draw();
+  return true;
+}
+
+function isAiTurn() {
+  return (gameMode === '1p' || gameMode === 'llm') && turn === AI_SIDE && !gameOver;
+}
+
+// ══════════════════════════════════════════════════════════════
+// ── DRAWING ──
+// ══════════════════════════════════════════════════════════════
+// Seed for deterministic wood grain
+let grainSeed = 42;
+function seededRandom() {
+  grainSeed = (grainSeed * 16807 + 0) % 2147483647;
+  return grainSeed / 2147483647;
+}
+
+function draw() {
+  ctx.clearRect(0, 0, BOARD_PX, BOARD_PX);
+  drawBoardSurface();
+  drawGrid();
+  drawStarPoints();
+  drawHover();
+  drawStones();
+  drawLastMoveMarker();
+  drawWinLine();
+}
+
+function drawBoardSurface() {
+  // Warm wood
+  ctx.fillStyle = '#d4b478';
+  ctx.fillRect(0, 0, BOARD_PX, BOARD_PX);
+
+  // Subtle wood grain (deterministic)
+  grainSeed = 42;
+  ctx.save();
+  ctx.globalAlpha = 0.06;
+  for (let i = 0; i < 50; i++) {
+    const y = seededRandom() * BOARD_PX;
+    ctx.strokeStyle = seededRandom() > 0.5 ? '#b89030' : '#e8c878';
+    ctx.lineWidth = seededRandom() * 2 + 0.5;
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.bezierCurveTo(BOARD_PX * 0.3, y + (seededRandom() - 0.5) * 8,
+                      BOARD_PX * 0.7, y + (seededRandom() - 0.5) * 8, BOARD_PX, y);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawGrid() {
+  ctx.strokeStyle = '#2a2018';
+  ctx.lineWidth = 1;
+
+  for (let i = 0; i < SIZE; i++) {
+    const pos = MARGIN + i * SPACING;
+    ctx.beginPath();
+    ctx.moveTo(pos, MARGIN);
+    ctx.lineTo(pos, MARGIN + (SIZE - 1) * SPACING);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(MARGIN, pos);
+    ctx.lineTo(MARGIN + (SIZE - 1) * SPACING, pos);
+    ctx.stroke();
+  }
+
+  // Coordinate labels
+  ctx.font = '10px "Cormorant Garamond", serif';
+  ctx.fillStyle = '#2a2018';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  const colLabels = 'ABCDEFGHJKLMNOP'; // Skip I
+  for (let i = 0; i < SIZE; i++) {
+    const x = MARGIN + i * SPACING;
+    ctx.fillText(colLabels[i], x, 10);
+    ctx.fillText(colLabels[i], x, BOARD_PX - 10);
+    const y = MARGIN + i * SPACING;
+    ctx.fillText(String(SIZE - i), 10, y);
+    ctx.fillText(String(SIZE - i), BOARD_PX - 10, y);
+  }
+}
+
+function drawStarPoints() {
+  ctx.fillStyle = '#2a2018';
+  for (const [r, c] of STAR_POINTS) {
+    const x = MARGIN + c * SPACING;
+    const y = MARGIN + r * SPACING;
+    ctx.beginPath();
+    ctx.arc(x, y, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function drawHover() {
+  if (!hoverCell || gameOver || aiThinking || isAiTurn()) return;
+  const { r, c } = hoverCell;
+  if (board[r][c] !== EMPTY) return;
+
+  const x = MARGIN + c * SPACING;
+  const y = MARGIN + r * SPACING;
+  const radius = SPACING * 0.42;
+
+  ctx.save();
+  ctx.globalAlpha = 0.35;
+  if (turn === BLACK) {
+    const grad = ctx.createRadialGradient(x - radius * 0.3, y - radius * 0.3, 0, x, y, radius);
+    grad.addColorStop(0, '#555');
+    grad.addColorStop(1, '#111');
+    ctx.fillStyle = grad;
+  } else {
+    const grad = ctx.createRadialGradient(x - radius * 0.3, y - radius * 0.3, 0, x, y, radius);
+    grad.addColorStop(0, '#fff');
+    grad.addColorStop(1, '#ccc');
+    ctx.fillStyle = grad;
+  }
+  ctx.beginPath();
+  ctx.arc(x, y, radius, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawStone(x, y, color) {
+  const radius = SPACING * 0.42;
+
+  // Shadow
+  ctx.save();
+  ctx.beginPath();
+  ctx.ellipse(x + 2, y + 3, radius, radius * 0.9, 0, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
+  ctx.fill();
+  ctx.restore();
+
+  if (color === BLACK) {
+    const grad = ctx.createRadialGradient(x - radius * 0.3, y - radius * 0.35, radius * 0.1, x, y, radius);
+    grad.addColorStop(0, '#606060');
+    grad.addColorStop(0.3, '#3a3a3a');
+    grad.addColorStop(0.7, '#1c1c1c');
+    grad.addColorStop(1, '#0a0a0a');
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // Ink wash texture highlight
+    ctx.beginPath();
+    ctx.ellipse(x - radius * 0.25, y - radius * 0.3, radius * 0.3, radius * 0.15, -0.5, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.12)';
+    ctx.fill();
+  } else {
+    const grad = ctx.createRadialGradient(x - radius * 0.3, y - radius * 0.35, radius * 0.05, x + radius * 0.1, y + radius * 0.1, radius);
+    grad.addColorStop(0, '#ffffff');
+    grad.addColorStop(0.4, '#f0ece4');
+    grad.addColorStop(0.75, '#d8d0c0');
+    grad.addColorStop(1, '#b8b0a0');
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // Shell-like streaks (ink wash)
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.clip();
+    ctx.globalAlpha = 0.06;
+    for (let i = 0; i < 5; i++) {
+      const angle = -0.8 + i * 0.3;
+      const dx = Math.cos(angle);
+      const dy = Math.sin(angle);
+      ctx.strokeStyle = '#887860';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x - dx * radius, y - dy * radius);
+      ctx.quadraticCurveTo(x + 2, y + 2, x + dx * radius, y + dy * radius);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // Specular highlight
+    ctx.beginPath();
+    ctx.ellipse(x - radius * 0.2, y - radius * 0.25, radius * 0.28, radius * 0.14, -0.5, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.fill();
+
+    // Subtle rim
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(0,0,0,0.1)';
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+  }
+}
+
+function drawStones() {
+  for (let r = 0; r < SIZE; r++) {
+    for (let c = 0; c < SIZE; c++) {
+      if (board[r][c] === EMPTY) continue;
+      const x = MARGIN + c * SPACING;
+      const y = MARGIN + r * SPACING;
+      drawStone(x, y, board[r][c]);
+    }
+  }
+}
+
+function drawLastMoveMarker() {
+  if (!lastMove || winLine) return;
+  const x = MARGIN + lastMove.c * SPACING;
+  const y = MARGIN + lastMove.r * SPACING;
+  const color = board[lastMove.r][lastMove.c];
+
+  ctx.beginPath();
+  ctx.arc(x, y, 5, 0, Math.PI * 2);
+  ctx.fillStyle = color === BLACK ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.5)';
+  ctx.fill();
+}
+
+function drawWinLine() {
+  if (!winLine) return;
+  const color = board[winLine[0].r][winLine[0].c];
+
+  // Highlight winning stones
+  for (const {r, c} of winLine) {
+    const x = MARGIN + c * SPACING;
+    const y = MARGIN + r * SPACING;
+    const radius = SPACING * 0.42;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(x, y, radius + 3, 0, Math.PI * 2);
+    ctx.strokeStyle = color === BLACK ? 'rgba(255,200,50,0.8)' : 'rgba(255,200,50,0.8)';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Draw connecting line through winning stones
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255,200,50,0.5)';
+  ctx.lineWidth = 4;
+  ctx.lineCap = 'round';
+  // Sort by position for clean line
+  const sorted = [...winLine].sort((a, b) => a.r !== b.r ? a.r - b.r : a.c - b.c);
+  ctx.beginPath();
+  ctx.moveTo(MARGIN + sorted[0].c * SPACING, MARGIN + sorted[0].r * SPACING);
+  for (let i = 1; i < sorted.length; i++) {
+    ctx.lineTo(MARGIN + sorted[i].c * SPACING, MARGIN + sorted[i].r * SPACING);
+  }
+  ctx.stroke();
+  ctx.restore();
+}
+
+// ══════════════════════════════════════════════════════════════
+// ── UI UPDATE ──
+// ══════════════════════════════════════════════════════════════
+function updateUI() {
+  const turnDisc = document.getElementById('turnDisc');
+  const turnText = document.getElementById('turnText');
+  const indicator = document.getElementById('turnIndicator');
+
+  turnDisc.className = 'turn-disc ' + (turn === BLACK ? 'black-stone' : 'white-stone');
+  indicator.className = 'turn-indicator ' + (turn === BLACK ? 'active-black' : 'active-white');
+
+  if (gameMode === '1p' || gameMode === 'llm') {
+    const opName = gameMode === 'llm' ? 'LLM' : 'Computer';
+    turnText.textContent = turn === BLACK ? 'Your turn' : opName + ' thinks\u2026';
+  } else {
+    turnText.textContent = (turn === BLACK ? 'Black' : 'White') + ' moves';
+  }
+
+  // Scores (wins)
+  document.getElementById('scoreBlack').textContent = winsBlack;
+  document.getElementById('scoreWhite').textContent = winsWhite;
+
+  // Status
+  const msg = document.getElementById('statusMsg');
+  if (gameOver && winLine) {
+    const winner = board[winLine[0].r][winLine[0].c];
+    if (gameMode === '2p') {
+      msg.textContent = (winner === BLACK ? 'Black' : 'White') + ' wins with five in a row!';
+    } else {
+      msg.textContent = winner === HUMAN_SIDE ? 'You win with five in a row!' : (gameMode === 'llm' ? 'LLM' : 'Computer') + ' wins with five in a row!';
+    }
+    msg.className = 'status-msg winner';
+  } else if (gameOver) {
+    msg.textContent = 'Draw! The board is full.';
+    msg.className = 'status-msg winner';
+  } else if (aiThinking) {
+    const thinkName = gameMode === 'llm' ? 'LLM' : 'Computer';
+    msg.innerHTML = thinkName + ' is thinking <span class="thinking-dots"><span>.</span><span>.</span><span>.</span></span>';
+    msg.className = 'status-msg thinking';
+  } else {
+    const blackCount = countStones(BLACK);
+    const whiteCount = countStones(WHITE);
+    msg.textContent = 'Black: ' + blackCount + ' stones, White: ' + whiteCount + ' stones. Move ' + (moveCount + 1) + '.';
+    msg.className = 'status-msg';
+  }
+}
+
+function countStones(color) {
+  let count = 0;
+  for (let r = 0; r < SIZE; r++)
+    for (let c = 0; c < SIZE; c++)
+      if (board[r][c] === color) count++;
+  return count;
+}
+
+// ══════════════════════════════════════════════════════════════
+// ── AI ENGINE — MINIMAX WITH ALPHA-BETA ──
+// ══════════════════════════════════════════════════════════════
+
+// Pattern scoring for evaluation
+const SCORES = {
+  FIVE: 1000000,
+  OPEN_FOUR: 50000,
+  HALF_FOUR: 5000,
+  OPEN_THREE: 5000,
+  HALF_THREE: 500,
+  OPEN_TWO: 200,
+  HALF_TWO: 20,
+  CENTER_BONUS: 3,
+};
+
+// Evaluate a line segment (5-cell window) for a given color
+function evaluateWindow(window5, color) {
+  const opp = color === BLACK ? WHITE : BLACK;
+  let colorCount = 0, emptyCount = 0, oppCount = 0;
+  for (const cell of window5) {
+    if (cell === color) colorCount++;
+    else if (cell === EMPTY) emptyCount++;
+    else oppCount++;
+  }
+
+  if (oppCount > 0 && colorCount > 0) return 0; // mixed, no value
+  if (colorCount === 5) return SCORES.FIVE;
+  if (colorCount === 4 && emptyCount === 1) return SCORES.HALF_FOUR;
+  if (colorCount === 3 && emptyCount === 2) return SCORES.HALF_THREE;
+  if (colorCount === 2 && emptyCount === 3) return SCORES.HALF_TWO;
+  return 0;
+}
+
+// Evaluate open-ended patterns (more accurate than just windows)
+function evaluateLinePatterns(boardState, r, c, dr, dc, color) {
+  const opp = color === BLACK ? WHITE : BLACK;
+  // Count consecutive from (r,c) in both directions
+  let count = 1;
+  let openEnds = 0;
+
+  // Forward
+  let fr = r + dr, fc = c + dc;
+  while (inBounds(fr, fc) && boardState[fr][fc] === color) {
+    count++;
+    fr += dr;
+    fc += dc;
+  }
+  if (inBounds(fr, fc) && boardState[fr][fc] === EMPTY) openEnds++;
+
+  // Backward
+  let br = r - dr, bc = c - dc;
+  while (inBounds(br, bc) && boardState[br][bc] === color) {
+    count++;
+    br -= dr;
+    bc -= dc;
+  }
+  if (inBounds(br, bc) && boardState[br][bc] === EMPTY) openEnds++;
+
+  if (count >= 5) return SCORES.FIVE;
+  if (count === 4) {
+    if (openEnds === 2) return SCORES.OPEN_FOUR;
+    if (openEnds === 1) return SCORES.HALF_FOUR;
+  }
+  if (count === 3) {
+    if (openEnds === 2) return SCORES.OPEN_THREE;
+    if (openEnds === 1) return SCORES.HALF_THREE;
+  }
+  if (count === 2) {
+    if (openEnds === 2) return SCORES.OPEN_TWO;
+    if (openEnds === 1) return SCORES.HALF_TWO;
+  }
+  return 0;
+}
+
+// Full board evaluation for a color
+function evaluateBoard(boardState, aiColor) {
+  const humanColor = aiColor === BLACK ? WHITE : BLACK;
+  let score = 0;
+  const center = Math.floor(SIZE / 2);
+
+  for (let r = 0; r < SIZE; r++) {
+    for (let c = 0; c < SIZE; c++) {
+      if (boardState[r][c] === EMPTY) continue;
+
+      const isAI = boardState[r][c] === aiColor;
+      const color = boardState[r][c];
+
+      for (const [dr, dc] of DIRS) {
+        // Only evaluate in positive direction to avoid double counting
+        const pr = r - dr, pc = c - dc;
+        if (inBounds(pr, pc) && boardState[pr][pc] === color) continue;
+
+        const patternScore = evaluateLinePatterns(boardState, r, c, dr, dc, color);
+        score += isAI ? patternScore : -patternScore * 1.1; // Slightly prioritize blocking
+      }
+
+      // Center bonus
+      const distFromCenter = Math.abs(r - center) + Math.abs(c - center);
+      const centerScore = Math.max(0, (SIZE - distFromCenter)) * SCORES.CENTER_BONUS;
+      score += isAI ? centerScore : -centerScore;
+    }
+  }
+
+  return score;
+}
+
+// Generate candidate moves (near existing stones)
+function getCandidateMoves(boardState, radius) {
+  const candidates = new Set();
+  const rad = radius || 2;
+
+  for (let r = 0; r < SIZE; r++) {
+    for (let c = 0; c < SIZE; c++) {
+      if (boardState[r][c] === EMPTY) continue;
+      for (let dr = -rad; dr <= rad; dr++) {
+        for (let dc = -rad; dc <= rad; dc++) {
+          const nr = r + dr, nc = c + dc;
+          if (inBounds(nr, nc) && boardState[nr][nc] === EMPTY) {
+            candidates.add(nr * SIZE + nc);
+          }
+        }
+      }
+    }
+  }
+
+  // If no candidates (empty board), return center area
+  if (candidates.size === 0) {
+    const center = Math.floor(SIZE / 2);
+    return [{r: center, c: center}];
+  }
+
+  return Array.from(candidates).map(key => ({r: Math.floor(key / SIZE), c: key % SIZE}));
+}
+
+// Check for immediate threats (win or block)
+function findThreatMoves(boardState, color) {
+  const candidates = getCandidateMoves(boardState, 2);
+  const wins = [];
+  const blocks = [];
+  const opp = color === BLACK ? WHITE : BLACK;
+
+  for (const {r, c} of candidates) {
+    // Check if this move wins
+    boardState[r][c] = color;
+    if (checkWinAt(boardState, r, c, color)) wins.push({r, c});
+    boardState[r][c] = EMPTY;
+
+    // Check if opponent would win here (must block)
+    boardState[r][c] = opp;
+    if (checkWinAt(boardState, r, c, opp)) blocks.push({r, c});
+    boardState[r][c] = EMPTY;
+  }
+
+  return { wins, blocks };
+}
+
+// Minimax with alpha-beta pruning
+function minimax(boardState, depth, alpha, beta, isMaximizing, aiColor) {
+  // Terminal checks
+  const humanColor = aiColor === BLACK ? WHITE : BLACK;
+
+  // Quick win check for last move optimization
+  if (depth < 3) { // Only do full check at shallow depths
+    const winner = findWinner(boardState);
+    if (winner) {
+      return winner.color === aiColor ? SCORES.FIVE * (depth + 1) : -SCORES.FIVE * (depth + 1);
+    }
+  }
+
+  if (depth === 0) {
+    return evaluateBoard(boardState, aiColor);
+  }
+
+  const currentColor = isMaximizing ? aiColor : humanColor;
+  let candidates = getCandidateMoves(boardState, 2);
+
+  // Threat detection: prioritize winning moves and blocks
+  const threats = findThreatMoves(boardState, currentColor);
+  if (threats.wins.length > 0) {
+    return isMaximizing ? SCORES.FIVE * (depth + 1) : -SCORES.FIVE * (depth + 1);
+  }
+
+  // Limit candidates for performance
+  if (candidates.length > 20) {
+    // Score and sort candidates
+    candidates = candidates.map(({r, c}) => {
+      boardState[r][c] = currentColor;
+      let score = 0;
+      for (const [dr, dc] of DIRS) {
+        score += evaluateLinePatterns(boardState, r, c, dr, dc, currentColor);
+      }
+      // Also check opponent value
+      boardState[r][c] = currentColor === BLACK ? WHITE : BLACK;
+      for (const [dr, dc] of DIRS) {
+        score += evaluateLinePatterns(boardState, r, c, dr, dc, currentColor === BLACK ? WHITE : BLACK) * 0.9;
+      }
+      boardState[r][c] = EMPTY;
+      return {r, c, score};
+    });
+    candidates.sort((a, b) => b.score - a.score);
+    candidates = candidates.slice(0, 15);
+  }
+
+  // Prioritize blocking moves
+  if (threats.blocks.length > 0) {
+    const blockSet = new Set(threats.blocks.map(m => m.r * SIZE + m.c));
+    const blockMoves = candidates.filter(m => blockSet.has(m.r * SIZE + m.c));
+    const otherMoves = candidates.filter(m => !blockSet.has(m.r * SIZE + m.c));
+    candidates = [...blockMoves, ...otherMoves.slice(0, 5)];
+  }
+
+  if (isMaximizing) {
+    let maxEval = -Infinity;
+    for (const {r, c} of candidates) {
+      boardState[r][c] = aiColor;
+      const winCheck = checkWinAt(boardState, r, c, aiColor);
+      if (winCheck) {
+        boardState[r][c] = EMPTY;
+        return SCORES.FIVE * (depth + 1);
+      }
+      const eval_ = minimax(boardState, depth - 1, alpha, beta, false, aiColor);
+      boardState[r][c] = EMPTY;
+      maxEval = Math.max(maxEval, eval_);
+      alpha = Math.max(alpha, eval_);
+      if (beta <= alpha) break;
+    }
+    return maxEval;
+  } else {
+    let minEval = Infinity;
+    for (const {r, c} of candidates) {
+      boardState[r][c] = humanColor;
+      const winCheck = checkWinAt(boardState, r, c, humanColor);
+      if (winCheck) {
+        boardState[r][c] = EMPTY;
+        return -SCORES.FIVE * (depth + 1);
+      }
+      const eval_ = minimax(boardState, depth - 1, alpha, beta, true, aiColor);
+      boardState[r][c] = EMPTY;
+      minEval = Math.min(minEval, eval_);
+      beta = Math.min(beta, eval_);
+      if (beta <= alpha) break;
+    }
+    return minEval;
+  }
+}
+
+function aiChooseMove(callback) {
+  const aiColor = AI_SIDE;
+  const humanColor = HUMAN_SIDE;
+
+  // Empty board: play center
+  if (moveCount === 0) {
+    const center = Math.floor(SIZE / 2);
+    callback({r: center, c: center});
+    return;
+  }
+
+  // Check for immediate wins
+  const threats = findThreatMoves(board, aiColor);
+  if (threats.wins.length > 0) {
+    callback(threats.wins[0]);
+    return;
+  }
+
+  // Check for immediate blocks
+  const oppThreats = findThreatMoves(board, humanColor);
+  if (oppThreats.wins.length > 0) {
+    callback(oppThreats.wins[0]);
+    return;
+  }
+
+  let candidates = getCandidateMoves(board, 2);
+
+  if (difficulty === 1) {
+    // Easy: depth 1 + random element
+    // Score all candidates
+    let scored = candidates.map(({r, c}) => {
+      board[r][c] = aiColor;
+      let score = 0;
+      for (const [dr, dc] of DIRS) {
+        score += evaluateLinePatterns(board, r, c, dr, dc, aiColor);
+      }
+      board[r][c] = humanColor;
+      for (const [dr, dc] of DIRS) {
+        score += evaluateLinePatterns(board, r, c, dr, dc, humanColor) * 0.8;
+      }
+      board[r][c] = EMPTY;
+      return {r, c, score: score + Math.random() * 2000}; // Big random factor
+    });
+    scored.sort((a, b) => b.score - a.score);
+    // Pick from top 5 randomly
+    const pick = scored[Math.floor(Math.random() * Math.min(5, scored.length))];
+    callback(pick);
+    return;
+  }
+
+  // Medium (depth 2) and Hard (depth 3)
+  const depth = difficulty === 2 ? 2 : 3;
+
+  // Pre-sort candidates for better pruning
+  candidates = candidates.map(({r, c}) => {
+    board[r][c] = aiColor;
+    let score = 0;
+    for (const [dr, dc] of DIRS) {
+      score += evaluateLinePatterns(board, r, c, dr, dc, aiColor);
+    }
+    board[r][c] = humanColor;
+    for (const [dr, dc] of DIRS) {
+      score += evaluateLinePatterns(board, r, c, dr, dc, humanColor) * 0.9;
+    }
+    board[r][c] = EMPTY;
+    return {r, c, score};
+  });
+  candidates.sort((a, b) => b.score - a.score);
+  candidates = candidates.slice(0, difficulty === 2 ? 15 : 20);
+
+  let bestMove = candidates[0];
+  let bestScore = -Infinity;
+
+  for (const {r, c} of candidates) {
+    board[r][c] = aiColor;
+    const winCheck = checkWinAt(board, r, c, aiColor);
+    if (winCheck) {
+      board[r][c] = EMPTY;
+      callback({r, c});
+      return;
+    }
+    const score = minimax(board, depth - 1, -Infinity, Infinity, false, aiColor);
+    board[r][c] = EMPTY;
+
+    if (score > bestScore) {
+      bestScore = score;
+      bestMove = {r, c};
+    }
+  }
+
+  callback(bestMove);
+}
+
+function scheduleAiMove() {
+  if (!isAiTurn() || aiThinking || gameOver) return;
+
+  aiThinking = true;
+  updateUI();
+  draw();
+
+  const delay = gameMode === 'llm' ? 500 : difficulty === 1 ? 200 : 300;
+
+  setTimeout(() => {
+    aiChooseMove((move) => {
+      aiThinking = false;
+      if (move) {
+        placeStone(move.r, move.c);
+        if (gameMode === 'llm' && !gameOver) autoTaunt();
+        if (gameMode === 'llm' && gameOver) autoTaunt();
+      }
+    });
+  }, delay);
+}
+
+// ══════════════════════════════════════════════════════════════
+// ── INPUT ──
+// ══════════════════════════════════════════════════════════════
+canvas.addEventListener('click', (e) => {
+  if (gameOver || aiThinking) return;
+  if (isAiTurn()) return;
+  ensureAudio();
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = BOARD_PX / rect.width;
+  const scaleY = BOARD_PX / rect.height;
+  const px = (e.clientX - rect.left) * scaleX;
+  const py = (e.clientY - rect.top) * scaleY;
+
+  const c = Math.round((px - MARGIN) / SPACING);
+  const r = Math.round((py - MARGIN) / SPACING);
+  if (r < 0 || r >= SIZE || c < 0 || c >= SIZE) return;
+
+  if (placeStone(r, c)) {
+    scheduleAiMove();
+  }
+});
+
+canvas.addEventListener('mousemove', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = BOARD_PX / rect.width;
+  const scaleY = BOARD_PX / rect.height;
+  const px = (e.clientX - rect.left) * scaleX;
+  const py = (e.clientY - rect.top) * scaleY;
+  const c = Math.round((px - MARGIN) / SPACING);
+  const r = Math.round((py - MARGIN) / SPACING);
+  if (r < 0 || r >= SIZE || c < 0 || c >= SIZE) {
+    hoverCell = null;
+  } else {
+    hoverCell = { r, c };
+  }
+  if (!aiThinking) draw();
+});
+
+canvas.addEventListener('mouseleave', () => {
+  hoverCell = null;
+  if (!aiThinking) draw();
+});
+
+document.getElementById('btnNew').addEventListener('click', () => {
+  ensureAudio();
+  initGame();
+});
+
+// ══════════════════════════════════════════════════════════════
+// ── BOARD SERIALIZATION FOR LLM ──
+// ══════════════════════════════════════════════════════════════
+function boardToString() {
+  const colLabels = 'ABCDEFGHJKLMNOP';
+  let s = '    ' + colLabels.split('').join(' ') + '\n';
+  for (let r = 0; r < SIZE; r++) {
+    const rowNum = String(SIZE - r).padStart(2, ' ');
+    s += rowNum + '  ';
+    for (let c = 0; c < SIZE; c++) {
+      const p = board[r][c];
+      s += (p === BLACK ? 'X' : p === WHITE ? 'O' : '.') + ' ';
+    }
+    s += rowNum + '\n';
+  }
+  s += '    ' + colLabels.split('').join(' ');
+  return s;
+}
+
+function getGameStatus() {
+  const blackCount = countStones(BLACK);
+  const whiteCount = countStones(WHITE);
+  let status = `Black (human) stones: ${blackCount}. White (you, the LLM) stones: ${whiteCount}. `;
+  status += `Move ${moveCount + 1} of the game. `;
+  if (gameOver && winLine) {
+    const winner = board[winLine[0].r][winLine[0].c];
+    if (winner === WHITE) status += 'GAME OVER -- YOU (White) WON with five in a row!';
+    else status += 'GAME OVER -- YOU (White) LOST! Human got five in a row.';
+  } else if (gameOver) {
+    status += 'GAME OVER -- DRAW. Board is full.';
+  } else {
+    status += `Game in progress. ${turn === BLACK ? "Human's" : "Your"} turn.`;
+  }
+  return status;
+}
+
+// ══════════════════════════════════════════════════════════════
+// ── CHAT ──
+// ══════════════════════════════════════════════════════════════
+const chatPanel = document.getElementById('chatPanel');
+const chatMessages = document.getElementById('chatMessages');
+const chatInput = document.getElementById('chatInput');
+const chatSend = document.getElementById('chatSend');
+let chatSessionId = 'session-' + Date.now();
+let chatBusy = false;
+
+function showChat(visible) {
+  chatPanel.classList.toggle('visible', visible);
+  document.getElementById('chatSpacer').style.display = visible ? 'none' : 'block';
+}
+
+function addChatBubble(text, type) {
+  const bubble = document.createElement('div');
+  bubble.className = 'chat-bubble ' + type;
+  bubble.textContent = text;
+  chatMessages.appendChild(bubble);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+  return bubble;
+}
+
+async function sendChat() {
+  const text = chatInput.value.trim();
+  if (!text || chatBusy) return;
+
+  chatInput.value = '';
+  addChatBubble(text, 'user');
+
+  chatBusy = true;
+  const typingBubble = addChatBubble('...', 'llm-typing');
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: text,
+        model: llmModel || 'qwen2.5-coder:14b',
+        board: boardToString(),
+        sessionId: chatSessionId,
+        gameStatus: getGameStatus(),
+        gameName: 'gomoku'
+      })
+    });
+    const data = await res.json();
+    typingBubble.remove();
+    addChatBubble(data.reply || '...', 'llm');
+  } catch (e) {
+    typingBubble.remove();
+    addChatBubble('*connection lost*', 'system');
+  }
+  chatBusy = false;
+}
+
+chatSend.addEventListener('click', sendChat);
+chatInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') sendChat();
+});
+
+// Auto-taunt: LLM talks trash after its own moves
+let tauntMoveCount = 0;
+async function autoTaunt() {
+  if (gameMode !== 'llm' || chatBusy) return;
+  tauntMoveCount++;
+  const shouldTaunt = tauntMoveCount === 1 || gameOver || Math.random() < 0.4;
+  if (!shouldTaunt) return;
+
+  chatBusy = true;
+  const typingBubble = addChatBubble('...', 'llm-typing');
+
+  const prompts = [
+    '*just placed a stone* React to your own move with trash talk.',
+    '*just made a move* Taunt the human about your Gomoku strategy.',
+    '*just moved* Say something cocky about the board position.',
+    '*just extended a line* Comment on your growing threat.',
+  ];
+  if (gameOver && winLine) {
+    const winner = board[winLine[0].r][winLine[0].c];
+    prompts.length = 0;
+    if (winner === WHITE) {
+      prompts.push('*you just won the game of Gomoku with five in a row* Gloat mercilessly about your victory.');
+    } else {
+      prompts.push('*you just lost the game of Gomoku -- the human got five in a row* Be dramatically salty. Demand a rematch.');
+    }
+  }
+  const tauntPrompt = prompts[Math.floor(Math.random() * prompts.length)];
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: tauntPrompt,
+        model: llmModel || 'qwen2.5-coder:14b',
+        board: boardToString(),
+        sessionId: chatSessionId,
+        gameStatus: getGameStatus(),
+        gameName: 'gomoku'
+      })
+    });
+    const data = await res.json();
+    typingBubble.remove();
+    addChatBubble(data.reply || '...', 'llm');
+  } catch (e) {
+    typingBubble.remove();
+  }
+  chatBusy = false;
+}
+
+// Override initGame to clear chat
+const _origInitGame = initGame;
+initGame = function() {
+  _origInitGame();
+  tauntMoveCount = 0;
+  chatSessionId = 'session-' + Date.now();
+  chatMessages.innerHTML = '<div class="chat-bubble system">Chat with the LLM opponent. It bites back.</div>';
+  fetch('/api/chat/clear', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sessionId: chatSessionId })
+  }).catch(() => {});
+};
+
+// ── Start ──
+initGame();
+</script>
+
+</body>
+</html>

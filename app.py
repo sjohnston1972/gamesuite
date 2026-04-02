@@ -12,7 +12,8 @@ OLLAMA_URL = "http://192.168.1.250:11434"
 GAMES = [
     "draughts", "chess", "connect4", "tictactoe", "othello",
     "go", "backgammon", "battleship", "mancala", "mahjong",
-    "snakes", "ludo", "nim",
+    "snakes", "ludo", "nim", "gomoku", "dots", "hangman",
+    "memory", "mastermind", "2048", "morris",
 ]
 
 

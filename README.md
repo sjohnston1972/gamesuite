@@ -1,6 +1,6 @@
 # Game Suite
 
-A collection of 13 classic board games playable in the browser, each with AI opponents and optional LLM trash-talk via Ollama.
+A collection of 20 classic board games playable in the browser, each with AI opponents and optional LLM trash-talk via Ollama.
 
 ![Python](https://img.shields.io/badge/Python-3.10+-blue)
 ![Flask](https://img.shields.io/badge/Flask-3.x-green)
@@ -23,6 +23,13 @@ A collection of 13 classic board games playable in the browser, each with AI opp
 | Snakes & Ladders | Dice game (LLM chat) | Colorful retro |
 | Nim | Optimal XOR/nim-sum strategy | Matrix green, minimal |
 | Ludo | Heuristic evaluation | Bright classic |
+| Gomoku (Five in a Row) | Minimax + pattern scoring | Japanese ink wash |
+| Dots & Boxes | Greedy + chain analysis | Notebook graph paper |
+| Hangman | LLM picks words | Vintage carnival |
+| Memory (Concentration) | Adaptive memory AI | Retro pixel art |
+| Mastermind | Computer as code-maker | 70s retro plastic pegs |
+| 2048 | Single-player puzzle | Clean modern minimal |
+| Nine Men's Morris | Minimax + phase-aware eval | Carved stone medieval |
 
 ## Features
 
@@ -81,6 +88,13 @@ The LLM is used for **chat/trash-talk only** — game moves are handled by the b
 ├── snakes.html         # Snakes & Ladders
 ├── nim.html            # Nim
 ├── ludo.html           # Ludo
+├── gomoku.html         # Gomoku (Five in a Row)
+├── dots.html           # Dots & Boxes
+├── hangman.html        # Hangman
+├── memory.html         # Memory (Concentration)
+├── mastermind.html     # Mastermind
+├── 2048.html           # 2048
+├── morris.html         # Nine Men's Morris
 └── requirements.txt    # Python dependencies
 ```
 

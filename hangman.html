@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hangman</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@400;500;600&display=swap');
+
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+
+  :root {
+    --bg: #14100e;
+    --surface: #1c1714;
+    --surface-2: #221c17;
+    --border: #3a2818;
+    --accent: #a0783c;
+    --accent-dim: #6e5228;
+    --cream: #e8dcc4;
+    --cream-dim: #8a7a62;
+    --correct: #5a9e4a;
+    --wrong: #b84040;
+  }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: var(--bg);
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    overflow: hidden;
+  }
+
+  body {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: max(10px, calc(50vh - 340px));
+    background:
+      radial-gradient(ellipse at 30% 20%, rgba(160,120,60,0.04) 0%, transparent 60%),
+      radial-gradient(ellipse at 70% 80%, rgba(100,70,30,0.03) 0%, transparent 60%),
+      var(--bg);
+  }
+
+  .game-container {
+    display: flex;
+    gap: 30px;
+    align-items: flex-start;
+    user-select: none;
+  }
+
+  .sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: 220px;
+    flex-shrink: 0;
+  }
+
+  .back-link {
+    font-size: 12px;
+    color: var(--cream-dim);
+    text-decoration: none;
+    letter-spacing: 1px;
+    transition: color 0.2s;
+  }
+  .back-link:hover { color: var(--accent); }
+
+  .game-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 30px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    line-height: 1;
+  }
+  .game-title span {
+    display: block;
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--cream-dim);
+    letter-spacing: 5px;
+    margin-top: 4px;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  /* ── Mode Selector ── */
+  .mode-panel {
+    padding: 14px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .mode-panel h3 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--cream-dim);
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    margin-bottom: 10px;
+  }
+  .mode-toggle {
+    display: flex;
+    gap: 4px;
+  }
+  .mode-btn {
+    flex: 1;
+    padding: 7px 0;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--cream-dim);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .mode-btn:hover { border-color: var(--accent-dim); color: var(--cream); }
+  .mode-btn.active {
+    background: rgba(160,120,60,0.15);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .llm-section {
+    display: none;
+    margin-top: 10px;
+  }
+  .llm-section.visible { display: block; }
+  .llm-label {
+    font-size: 10px;
+    color: var(--cream-dim);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 5px;
+  }
+  .model-select {
+    width: 100%;
+    padding: 6px 8px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    outline: none;
+    cursor: pointer;
+  }
+
+  /* ── Category Selector ── */
+  .category-panel {
+    padding: 14px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .category-panel h3 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--cream-dim);
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    margin-bottom: 10px;
+  }
+  .cat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+  }
+  .cat-btn {
+    padding: 6px 0;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--cream-dim);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 10px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .cat-btn:hover { border-color: var(--accent-dim); color: var(--cream); }
+  .cat-btn.active {
+    background: rgba(160,120,60,0.15);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* ── Score ── */
+  .score-panel {
+    padding: 14px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    display: flex;
+    justify-content: space-around;
+    text-align: center;
+  }
+  .score-item .score-label {
+    font-size: 10px;
+    color: var(--cream-dim);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+  .score-item .score-val {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .score-item .score-val.wins { color: var(--correct); }
+  .score-item .score-val.losses { color: var(--wrong); }
+
+  /* ── Status ── */
+  .status-msg {
+    min-height: 67px;
+    padding: 12px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--cream);
+    display: flex;
+    align-items: center;
+  }
+
+  .btn-new {
+    padding: 12px 0;
+    background: rgba(160,120,60,0.15);
+    border: 1px solid var(--accent-dim);
+    border-radius: 8px;
+    color: var(--accent);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .btn-new:hover {
+    background: rgba(160,120,60,0.25);
+    border-color: var(--accent);
+  }
+
+  /* ── Board Frame ── */
+  .board-frame {
+    position: relative;
+    flex-shrink: 0;
+    padding: 18px;
+    background: linear-gradient(145deg, #2a1e14, #1a120c, #221810);
+    border-radius: 8px;
+    box-shadow:
+      0 2px 4px rgba(0,0,0,0.4),
+      0 8px 24px rgba(0,0,0,0.5),
+      0 20px 60px rgba(0,0,0,0.4),
+      inset 0 1px 0 rgba(160,120,60,0.06);
+  }
+  .board-frame::before {
+    content: '';
+    position: absolute;
+    inset: 4px;
+    border: 1px solid rgba(160,120,60,0.1);
+    border-radius: 6px;
+    pointer-events: none;
+  }
+
+  canvas {
+    display: block;
+    border-radius: 3px;
+  }
+
+  /* ── Letter Buttons ── */
+  .letter-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 5px;
+    margin-top: 14px;
+    max-width: 500px;
+  }
+  .letter-btn {
+    padding: 8px 0;
+    background: linear-gradient(180deg, #3a2818, #2a1c10);
+    border: 1px solid #4a3828;
+    border-radius: 5px;
+    color: var(--cream);
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-transform: uppercase;
+  }
+  .letter-btn:hover:not(:disabled) {
+    background: linear-gradient(180deg, #4a3828, #3a2818);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .letter-btn:disabled {
+    cursor: default;
+    opacity: 0.4;
+  }
+  .letter-btn.correct {
+    background: rgba(90,158,74,0.25);
+    border-color: var(--correct);
+    color: var(--correct);
+    opacity: 1;
+  }
+  .letter-btn.wrong {
+    background: rgba(184,64,64,0.2);
+    border-color: var(--wrong);
+    color: var(--wrong);
+    opacity: 1;
+  }
+
+  /* ── Thinking Dots ── */
+  @keyframes dotPulse {
+    0%, 80%, 100% { opacity: 0.2; }
+    40% { opacity: 1; }
+  }
+  .thinking-dots span {
+    animation: dotPulse 1.4s infinite;
+    font-size: 18px;
+    letter-spacing: 2px;
+  }
+  .thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+  /* ── Chat Panel ── */
+  .chat-spacer {
+    width: 220px;
+    flex-shrink: 0;
+  }
+  .chat-panel {
+    display: none;
+    flex-direction: column;
+    width: 340px;
+    flex-shrink: 0;
+    height: 620px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .chat-panel.visible { display: flex; }
+
+  .chat-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent-dim);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    flex-shrink: 0;
+  }
+
+  .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .chat-bubble {
+    max-width: 85%;
+    padding: 8px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    line-height: 1.45;
+    word-wrap: break-word;
+    animation: fadeIn 0.2s ease;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .chat-bubble.user {
+    align-self: flex-end;
+    background: rgba(160,120,60,0.2);
+    color: var(--cream);
+    border-bottom-right-radius: 4px;
+  }
+  .chat-bubble.llm {
+    align-self: flex-start;
+    background: rgba(184,64,64,0.15);
+    color: var(--cream);
+    border-bottom-left-radius: 4px;
+  }
+  .chat-bubble.system {
+    align-self: center;
+    background: transparent;
+    color: var(--cream-dim);
+    font-size: 11px;
+    font-style: italic;
+    padding: 4px 8px;
+  }
+  .chat-bubble.llm-typing {
+    align-self: flex-start;
+    background: rgba(184,64,64,0.1);
+    color: var(--cream-dim);
+    border-bottom-left-radius: 4px;
+  }
+
+  .chat-input-row {
+    display: flex;
+    gap: 6px;
+    padding: 10px 12px;
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .chat-input {
+    flex: 1;
+    padding: 8px 10px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .chat-input:focus { border-color: var(--accent-dim); }
+  .chat-input::placeholder { color: var(--cream-dim); opacity: 0.5; }
+
+  .chat-send {
+    padding: 8px 14px;
+    background: rgba(160,120,60,0.2);
+    border: 1px solid rgba(160,120,60,0.3);
+    border-radius: 6px;
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .chat-send:hover {
+    background: rgba(160,120,60,0.3);
+    border-color: var(--accent);
+  }
+
+  @media (max-width: 1000px) {
+    .game-container { flex-direction: column; gap: 20px; }
+    .sidebar { flex-direction: row; flex-wrap: wrap; min-width: unset; width: auto !important; }
+    .sidebar > * { flex: 1; min-width: 140px; }
+    .chat-panel { width: 100%; height: 300px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="game-container">
+  <div class="sidebar">
+    <div>
+      <a href="index.html" class="back-link">&larr; Back</a>
+      <div class="game-title" style="margin-top:6px">Hangman<span>Guess or Swing</span></div>
+    </div>
+
+    <div class="mode-panel">
+      <h3>Game Mode</h3>
+      <div class="mode-toggle">
+        <button class="mode-btn active" data-mode="solo" id="btnSolo">Solo</button>
+        <button class="mode-btn" data-mode="llm" id="btnLLM">vs LLM</button>
+      </div>
+      <div class="llm-section" id="llmSection">
+        <div class="llm-label">Ollama Model</div>
+        <select id="modelSelect" class="model-select">
+          <option>Loading models...</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="category-panel">
+      <h3>Category</h3>
+      <div class="cat-grid" id="catGrid"></div>
+    </div>
+
+    <div class="score-panel">
+      <div class="score-item">
+        <div class="score-label">Wins</div>
+        <div class="score-val wins" id="scoreWins">0</div>
+      </div>
+      <div class="score-item">
+        <div class="score-label">Losses</div>
+        <div class="score-val losses" id="scoreLosses">0</div>
+      </div>
+    </div>
+
+    <div class="status-msg" id="statusMsg">Pick a category to begin.</div>
+
+    <button class="btn-new" id="btnNew">New Game</button>
+  </div>
+
+  <div class="board-frame">
+    <canvas id="board" width="500" height="400"></canvas>
+    <div class="letter-grid" id="letterGrid"></div>
+  </div>
+
+  <div class="chat-panel" id="chatPanel">
+    <div class="chat-header">Gallows Talk</div>
+    <div class="chat-messages" id="chatMessages">
+      <div class="chat-bubble system">The hangman watches and taunts.</div>
+    </div>
+    <div class="chat-input-row">
+      <input type="text" class="chat-input" id="chatInput" placeholder="Talk to the hangman..." maxlength="200" autocomplete="off">
+      <button class="chat-send" id="chatSend">Send</button>
+    </div>
+  </div>
+  <div class="chat-spacer" id="chatSpacer"></div>
+</div>
+
+<script>
+// ── Word Lists ──
+const WORDS = {
+  Animals: [
+    'elephant','giraffe','penguin','dolphin','cheetah','kangaroo','buffalo','octopus',
+    'gorilla','leopard','hamster','peacock','panther','gazelle','walrus','pelican',
+    'toucan','parrot','falcon','badger','coyote','meerkat','iguana','lobster',
+    'salmon','mantis','jaguar','beetle','puffin','ferret'
+  ],
+  Countries: [
+    'brazil','france','japan','mexico','canada','germany','egypt','norway',
+    'sweden','portugal','thailand','argentina','colombia','morocco','vietnam',
+    'ukraine','finland','ireland','romania','hungary','nepal','austria','turkey',
+    'poland','greece','croatia','bolivia','uruguay','iceland','denmark'
+  ],
+  Foods: [
+    'spaghetti','avocado','pancake','biscuit','lobster','burrito','pretzel','lasagna',
+    'muffin','waffle','nachos','dumpling','tempura','chorizo','granola','goulash',
+    'risotto','brownie','falafel','crouton','custard','rhubarb','sashimi','truffle',
+    'brioche','tiramisu','pudding','polenta','bruschetta','parfait'
+  ],
+  Sports: [
+    'baseball','football','swimming','archery','fencing','lacrosse','cycling','bowling',
+    'cricket','surfing','skating','climbing','sailing','javelin','hurdles','karate',
+    'boxing','tennis','hockey','squash','rowing','diving','sprint','discus',
+    'biathlon','slalom','curling','badminton','handball','judo'
+  ],
+  Movies: [
+    'inception','gladiator','avatar','titanic','batman','frozen','jaws','gravity',
+    'arrival','dunkirk','parasite','spotlight','whiplash','moonlight','braveheart',
+    'aliens','rocky','memento','platoon','vertigo','psycho','chinatown','network',
+    'amadeus','fargo','zodiac','prestige','departed','interstellar','tenet'
+  ],
+  Science: [
+    'quantum','neutron','nucleus','entropy','voltage','gravity','photon','plasma',
+    'electron','proton','molecule','catalyst','isotope','organism','bacteria','protein',
+    'genome','synapse','quasar','mitosis','fusion','fission','crystal','nebula',
+    'magnet','prism','enzyme','polymer','vaccine','microbe'
+  ]
+};
+
+const CATEGORIES = Object.keys(WORDS);
+const CANVAS_W = 500, CANVAS_H = 400;
+const MAX_WRONG = 6;
+
+// ── State ──
+let gameMode = 'solo';
+let llmModel = '';
+let category = '';
+let secretWord = '';
+let guessedLetters = new Set();
+let wrongCount = 0;
+let gameOver = false;
+let gameWon = false;
+let wins = 0, losses = 0;
+let gameActive = false;
+
+// ── Audio ──
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx;
+function ensureAudio() { if (!audioCtx) audioCtx = new AudioCtx(); }
+
+function playSound(type) {
+  ensureAudio();
+  const ctx = audioCtx;
+  const now = ctx.currentTime;
+
+  if (type === 'correct') {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(660, now);
+    osc.frequency.setValueAtTime(880, now + 0.08);
+    gain.gain.setValueAtTime(0.15, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(now); osc.stop(now + 0.25);
+  }
+  else if (type === 'wrong') {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(150, now);
+    osc.frequency.setValueAtTime(100, now + 0.15);
+    gain.gain.setValueAtTime(0.12, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(now); osc.stop(now + 0.3);
+  }
+  else if (type === 'win') {
+    [523, 659, 784, 1047].forEach((f, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = f;
+      gain.gain.setValueAtTime(0.12, now + i * 0.12);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.12 + 0.3);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(now + i * 0.12); osc.stop(now + i * 0.12 + 0.3);
+    });
+  }
+  else if (type === 'lose') {
+    [200, 180, 150, 120].forEach((f, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.value = f;
+      gain.gain.setValueAtTime(0.15, now + i * 0.2);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.2 + 0.4);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(now + i * 0.2); osc.stop(now + i * 0.2 + 0.4);
+    });
+  }
+}
+
+// ── Canvas ──
+const canvas = document.getElementById('board');
+const ctx = canvas.getContext('2d');
+
+function drawBoard() {
+  // Parchment background
+  ctx.fillStyle = '#e8dcc4';
+  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+  // Subtle texture
+  ctx.save();
+  ctx.globalAlpha = 0.03;
+  for (let i = 0; i < 400; i++) {
+    const x = Math.random() * CANVAS_W;
+    const y = Math.random() * CANVAS_H;
+    const s = Math.random() * 3 + 1;
+    ctx.fillStyle = Math.random() > 0.5 ? '#8a7a62' : '#6e5228';
+    ctx.fillRect(x, y, s, s);
+  }
+  ctx.restore();
+
+  // Stained edges
+  const edgeGrad = ctx.createRadialGradient(CANVAS_W/2, CANVAS_H/2, 150, CANVAS_W/2, CANVAS_H/2, 300);
+  edgeGrad.addColorStop(0, 'rgba(0,0,0,0)');
+  edgeGrad.addColorStop(1, 'rgba(80,60,30,0.12)');
+  ctx.fillStyle = edgeGrad;
+  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+  drawGallows();
+  drawHangman();
+  drawWord();
+}
+
+function drawGallows() {
+  ctx.strokeStyle = '#3a2818';
+  ctx.lineWidth = 4;
+  ctx.lineCap = 'round';
+
+  // Base
+  ctx.beginPath();
+  ctx.moveTo(60, 340);
+  ctx.lineTo(200, 340);
+  ctx.stroke();
+
+  // Upright
+  ctx.beginPath();
+  ctx.moveTo(130, 340);
+  ctx.lineTo(130, 60);
+  ctx.stroke();
+
+  // Top beam
+  ctx.beginPath();
+  ctx.moveTo(130, 60);
+  ctx.lineTo(300, 60);
+  ctx.stroke();
+
+  // Brace
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(130, 100);
+  ctx.lineTo(170, 60);
+  ctx.stroke();
+
+  // Rope
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = '#5a4020';
+  ctx.beginPath();
+  ctx.moveTo(300, 60);
+  ctx.lineTo(300, 100);
+  ctx.stroke();
+}
+
+function drawHangman() {
+  if (wrongCount === 0) return;
+
+  const cx = 300, headY = 120, headR = 20;
+  ctx.strokeStyle = '#2a1c10';
+  ctx.lineWidth = 3;
+  ctx.lineCap = 'round';
+
+  // Head
+  if (wrongCount >= 1) {
+    ctx.beginPath();
+    ctx.arc(cx, headY, headR, 0, Math.PI * 2);
+    ctx.stroke();
+    // Eyes if dead
+    if (gameOver && !gameWon) {
+      ctx.lineWidth = 2;
+      // X eyes
+      [-8, 8].forEach(dx => {
+        ctx.beginPath();
+        ctx.moveTo(cx + dx - 4, headY - 4);
+        ctx.lineTo(cx + dx + 4, headY + 4);
+        ctx.moveTo(cx + dx + 4, headY - 4);
+        ctx.lineTo(cx + dx - 4, headY + 4);
+        ctx.stroke();
+      });
+    }
+    ctx.lineWidth = 3;
+  }
+
+  // Body
+  if (wrongCount >= 2) {
+    ctx.beginPath();
+    ctx.moveTo(cx, headY + headR);
+    ctx.lineTo(cx, headY + headR + 70);
+    ctx.stroke();
+  }
+
+  // Left arm
+  if (wrongCount >= 3) {
+    ctx.beginPath();
+    ctx.moveTo(cx, headY + headR + 20);
+    ctx.lineTo(cx - 35, headY + headR + 55);
+    ctx.stroke();
+  }
+
+  // Right arm
+  if (wrongCount >= 4) {
+    ctx.beginPath();
+    ctx.moveTo(cx, headY + headR + 20);
+    ctx.lineTo(cx + 35, headY + headR + 55);
+    ctx.stroke();
+  }
+
+  // Left leg
+  if (wrongCount >= 5) {
+    ctx.beginPath();
+    ctx.moveTo(cx, headY + headR + 70);
+    ctx.lineTo(cx - 30, headY + headR + 110);
+    ctx.stroke();
+  }
+
+  // Right leg
+  if (wrongCount >= 6) {
+    ctx.beginPath();
+    ctx.moveTo(cx, headY + headR + 70);
+    ctx.lineTo(cx + 30, headY + headR + 110);
+    ctx.stroke();
+  }
+}
+
+function drawWord() {
+  if (!secretWord) return;
+
+  const letters = secretWord.split('');
+  const dashW = 24, gap = 8;
+  const totalW = letters.length * dashW + (letters.length - 1) * gap;
+  const startX = (CANVAS_W - totalW) / 2;
+  const y = 370;
+
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'bottom';
+
+  letters.forEach((letter, i) => {
+    const x = startX + i * (dashW + gap) + dashW / 2;
+
+    // Draw dash
+    ctx.strokeStyle = '#3a2818';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x - dashW / 2 + 2, y);
+    ctx.lineTo(x + dashW / 2 - 2, y);
+    ctx.stroke();
+
+    // Draw letter if guessed or game over
+    if (guessedLetters.has(letter) || gameOver) {
+      ctx.font = '700 22px "Cormorant Garamond", serif';
+      if (gameOver && !gameWon && !guessedLetters.has(letter)) {
+        ctx.fillStyle = '#b84040';
+      } else if (gameOver && gameWon) {
+        ctx.fillStyle = '#3a7a30';
+      } else {
+        ctx.fillStyle = '#2a1c10';
+      }
+      ctx.fillText(letter.toUpperCase(), x, y - 4);
+    }
+  });
+}
+
+// ── Letter Grid ──
+const letterGrid = document.getElementById('letterGrid');
+function buildLetterGrid() {
+  letterGrid.innerHTML = '';
+  'abcdefghijklmnopqrstuvwxyz'.split('').forEach(ch => {
+    const btn = document.createElement('button');
+    btn.className = 'letter-btn';
+    btn.textContent = ch.toUpperCase();
+    btn.dataset.letter = ch;
+    btn.addEventListener('click', () => guessLetter(ch));
+    letterGrid.appendChild(btn);
+  });
+}
+
+function updateLetterGrid() {
+  letterGrid.querySelectorAll('.letter-btn').forEach(btn => {
+    const ch = btn.dataset.letter;
+    if (guessedLetters.has(ch)) {
+      btn.disabled = true;
+      if (secretWord.includes(ch)) {
+        btn.classList.add('correct');
+      } else {
+        btn.classList.add('wrong');
+      }
+    }
+  });
+}
+
+// ── Game Logic ──
+function guessLetter(ch) {
+  if (gameOver || !gameActive || guessedLetters.has(ch)) return;
+
+  guessedLetters.add(ch);
+
+  if (secretWord.includes(ch)) {
+    playSound('correct');
+    // Check win
+    const allRevealed = secretWord.split('').every(l => guessedLetters.has(l));
+    if (allRevealed) {
+      gameOver = true;
+      gameWon = true;
+      wins++;
+      updateScore();
+      setStatus('Brilliant! You saved the man!');
+      playSound('win');
+    } else {
+      setStatus('Correct! Keep going...');
+    }
+  } else {
+    wrongCount++;
+    playSound('wrong');
+    if (wrongCount >= MAX_WRONG) {
+      gameOver = true;
+      gameWon = false;
+      losses++;
+      updateScore();
+      setStatus('The man swings. The word was: ' + secretWord.toUpperCase());
+      playSound('lose');
+    } else {
+      setStatus(`Wrong! ${MAX_WRONG - wrongCount} guess${MAX_WRONG - wrongCount !== 1 ? 'es' : ''} remaining.`);
+    }
+  }
+
+  updateLetterGrid();
+  drawBoard();
+  autoTaunt();
+}
+
+// Keyboard input
+document.addEventListener('keydown', (e) => {
+  if (e.ctrlKey || e.altKey || e.metaKey) return;
+  // Don't capture if chat input focused
+  if (document.activeElement === document.getElementById('chatInput')) return;
+  const ch = e.key.toLowerCase();
+  if (/^[a-z]$/.test(ch)) {
+    guessLetter(ch);
+  }
+});
+
+function setStatus(msg) {
+  document.getElementById('statusMsg').textContent = msg;
+}
+
+function updateScore() {
+  document.getElementById('scoreWins').textContent = wins;
+  document.getElementById('scoreLosses').textContent = losses;
+}
+
+// ── Category Buttons ──
+const catGrid = document.getElementById('catGrid');
+CATEGORIES.forEach(cat => {
+  const btn = document.createElement('button');
+  btn.className = 'cat-btn';
+  btn.textContent = cat;
+  btn.addEventListener('click', () => selectCategory(cat));
+  catGrid.appendChild(btn);
+});
+
+function selectCategory(cat) {
+  category = cat;
+  catGrid.querySelectorAll('.cat-btn').forEach(b => b.classList.toggle('active', b.textContent === cat));
+  startNewGame();
+}
+
+// ── Mode Buttons ──
+document.getElementById('btnSolo').addEventListener('click', () => setMode('solo'));
+document.getElementById('btnLLM').addEventListener('click', () => setMode('llm'));
+
+function setMode(m) {
+  gameMode = m;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === m));
+  document.getElementById('llmSection').classList.toggle('visible', m === 'llm');
+  showChat(m === 'llm');
+  if (m === 'llm') loadModels();
+  if (category) startNewGame();
+}
+
+async function loadModels() {
+  const sel = document.getElementById('modelSelect');
+  try {
+    const res = await fetch('/api/models');
+    const data = await res.json();
+    const models = data.models || data;
+    sel.innerHTML = '';
+    models.forEach(m => {
+      const name = m.name || m.id || m;
+      const opt = document.createElement('option');
+      opt.value = name; opt.textContent = name;
+      sel.appendChild(opt);
+    });
+    llmModel = sel.value;
+    sel.addEventListener('change', () => { llmModel = sel.value; });
+  } catch (e) {
+    sel.innerHTML = '<option>No models found</option>';
+  }
+}
+
+// ── New Game ──
+document.getElementById('btnNew').addEventListener('click', () => {
+  if (category) startNewGame();
+  else setStatus('Pick a category first!');
+});
+
+async function startNewGame() {
+  guessedLetters = new Set();
+  wrongCount = 0;
+  gameOver = false;
+  gameWon = false;
+  gameActive = false;
+
+  buildLetterGrid();
+
+  // Clear chat session
+  chatSessionId = 'session-' + Date.now();
+  chatMessages.innerHTML = '<div class="chat-bubble system">The hangman watches and taunts.</div>';
+  fetch('/api/chat/clear', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sessionId: chatSessionId })
+  }).catch(() => {});
+
+  if (gameMode === 'llm') {
+    setStatus('Asking the LLM to pick a word...');
+    drawBoard();
+    secretWord = await pickWordFromLLM();
+  } else {
+    secretWord = pickRandomWord();
+  }
+
+  gameActive = true;
+  setStatus('Guess a letter! Category: ' + category);
+  drawBoard();
+
+  if (gameMode === 'llm') {
+    autoTaunt(true);
+  }
+}
+
+function pickRandomWord() {
+  const list = WORDS[category] || WORDS.Animals;
+  return list[Math.floor(Math.random() * list.length)].toLowerCase();
+}
+
+async function pickWordFromLLM() {
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: `You are the hangman in a Hangman word-guessing game. Pick a single word from the category "${category}" for the player to guess. The word should be a common English word, between 4 and 12 letters, containing only letters (no spaces, hyphens, or special characters). Reply with ONLY the word, nothing else. No punctuation, no explanation.`,
+        model: llmModel || 'qwen2.5-coder:14b',
+        board: '',
+        sessionId: chatSessionId,
+        gameStatus: 'picking word',
+        gameName: 'hangman'
+      })
+    });
+    const data = await res.json();
+    const reply = (data.reply || '').trim().toLowerCase();
+    // Parse: take first word that is all letters
+    const match = reply.match(/[a-z]{4,12}/);
+    if (match) return match[0];
+  } catch (e) {}
+  // Fallback
+  return pickRandomWord();
+}
+
+// ── Board State for Chat ──
+function boardToString() {
+  if (!secretWord) return 'No game active';
+  const display = secretWord.split('').map(l => guessedLetters.has(l) ? l.toUpperCase() : '_').join(' ');
+  const wrong = [...guessedLetters].filter(l => !secretWord.includes(l)).map(l => l.toUpperCase()).join(', ');
+  return `Word: ${display} | Wrong (${wrongCount}/${MAX_WRONG}): ${wrong || 'none'} | Category: ${category}`;
+}
+
+function getGameStatus() {
+  if (!gameActive && !gameOver) return 'Not started';
+  if (gameOver && gameWon) return 'Player won! Guessed the word: ' + secretWord.toUpperCase();
+  if (gameOver && !gameWon) return 'Player lost! Word was: ' + secretWord.toUpperCase();
+  return `Playing - ${wrongCount}/${MAX_WRONG} wrong, ${secretWord.split('').filter(l => guessedLetters.has(l)).length}/${secretWord.length} letters found`;
+}
+
+// ── Chat ──
+const chatMessages = document.getElementById('chatMessages');
+const chatInput = document.getElementById('chatInput');
+const chatSend = document.getElementById('chatSend');
+let chatBusy = false;
+let chatSessionId = 'session-' + Date.now();
+
+function showChat(show) {
+  document.getElementById('chatPanel').classList.toggle('visible', show);
+  document.getElementById('chatSpacer').style.display = show ? 'none' : '';
+}
+
+function addChatBubble(text, cls) {
+  const div = document.createElement('div');
+  div.className = 'chat-bubble ' + cls;
+  div.textContent = text;
+  chatMessages.appendChild(div);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+  return div;
+}
+
+async function sendChat() {
+  const text = chatInput.value.trim();
+  if (!text || chatBusy) return;
+
+  chatInput.value = '';
+  addChatBubble(text, 'user');
+
+  chatBusy = true;
+  const typingBubble = addChatBubble('...', 'llm-typing');
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: text,
+        model: llmModel || 'qwen2.5-coder:14b',
+        board: boardToString(),
+        sessionId: chatSessionId,
+        gameStatus: getGameStatus(),
+        gameName: 'hangman'
+      })
+    });
+    const data = await res.json();
+    typingBubble.remove();
+    addChatBubble(data.reply || '...', 'llm');
+  } catch (e) {
+    typingBubble.remove();
+    addChatBubble('*connection lost*', 'system');
+  }
+  chatBusy = false;
+}
+
+chatSend.addEventListener('click', sendChat);
+chatInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') sendChat();
+});
+
+// ── Auto-taunt ──
+let moveCount = 0;
+async function autoTaunt(isStart) {
+  if (gameMode !== 'llm' || chatBusy) return;
+  moveCount++;
+
+  const shouldTaunt = isStart || gameOver || Math.random() < 0.5;
+  if (!shouldTaunt) return;
+
+  chatBusy = true;
+  const typingBubble = addChatBubble('...', 'llm-typing');
+
+  let prompt;
+  if (isStart) {
+    prompt = `You are the sinister hangman. A new game has started in the "${category}" category. Welcome the player ominously. Hint at the difficulty without revealing anything. Keep it under 2 sentences. Do NOT reveal the word.`;
+  } else if (gameOver && gameWon) {
+    prompt = `The player guessed the word "${secretWord}" and WON! You're the hangman who lost their victim. Be dramatically defeated, grudgingly impressed. Keep it under 2 sentences.`;
+  } else if (gameOver && !gameWon) {
+    prompt = `The player FAILED to guess "${secretWord}" and the man is hanged! You're the gleeful hangman. Celebrate darkly. Keep it under 2 sentences.`;
+  } else if (wrongCount === 0) {
+    prompt = `The player just guessed a correct letter. You're the hangman getting nervous - they haven't made a single mistake yet. Show unease. Keep it under 2 sentences. Do NOT reveal the word "${secretWord}".`;
+  } else if (wrongCount >= 4) {
+    prompt = `The player has ${wrongCount} wrong guesses out of 6! You're the hangman getting excited - the noose tightens! Taunt them. Keep it under 2 sentences. Do NOT reveal the word.`;
+  } else {
+    const lastGuess = [...guessedLetters].pop();
+    const wasCorrect = secretWord.includes(lastGuess);
+    if (wasCorrect) {
+      prompt = `The player guessed "${lastGuess.toUpperCase()}" correctly. You're the hangman - be annoyed, nervous, or grudging. Keep it under 2 sentences. Do NOT reveal the word.`;
+    } else {
+      prompt = `The player guessed "${lastGuess.toUpperCase()}" WRONG! ${wrongCount}/${MAX_WRONG} body parts drawn. You're the hangman - taunt them as the figure takes shape. Keep it under 2 sentences. Do NOT reveal the word.`;
+    }
+  }
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: prompt,
+        model: llmModel || 'qwen2.5-coder:14b',
+        board: boardToString(),
+        sessionId: chatSessionId,
+        gameStatus: getGameStatus(),
+        gameName: 'hangman'
+      })
+    });
+    const data = await res.json();
+    typingBubble.remove();
+    addChatBubble(data.reply || '...', 'llm');
+  } catch (e) {
+    typingBubble.remove();
+  }
+  chatBusy = false;
+}
+
+// ── Start ──
+showChat(false);
+buildLetterGrid();
+drawBoard();
+</script>
+
+</body>
+</html>
