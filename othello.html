@@ -1,0 +1,1502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Othello</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@400;500;600&display=swap');
+
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+
+  :root {
+    --bg: #0e0e12;
+    --surface: #181820;
+    --surface-2: #1e1e28;
+    --border: #2a2a38;
+    --accent: #2ecc71;
+    --accent-dim: #1a8a4a;
+    --cream: #e8dcc8;
+    --cream-dim: #a89878;
+    --gold: #c9a84c;
+    --gold-dim: #8a7233;
+  }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: var(--bg);
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    overflow: hidden;
+  }
+
+  body {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: max(20px, calc(50vh - 320px));
+    background:
+      radial-gradient(ellipse at 30% 20%, rgba(46,204,113,0.04) 0%, transparent 60%),
+      radial-gradient(ellipse at 70% 80%, rgba(26,92,42,0.05) 0%, transparent 60%),
+      var(--bg);
+  }
+
+  .game-container {
+    display: flex;
+    gap: 30px;
+    align-items: flex-start;
+    user-select: none;
+  }
+
+  .board-frame {
+    position: relative;
+    flex-shrink: 0;
+    padding: 18px;
+    background: linear-gradient(145deg, #4a3c28, #2e2418, #3a2e1e);
+    border-radius: 8px;
+    box-shadow:
+      0 2px 4px rgba(0,0,0,0.4),
+      0 8px 24px rgba(0,0,0,0.5),
+      0 20px 60px rgba(0,0,0,0.4),
+      inset 0 1px 0 rgba(255,255,255,0.06);
+  }
+
+  .board-frame::before {
+    content: '';
+    position: absolute;
+    inset: 4px;
+    border: 1px solid rgba(46,204,113,0.12);
+    border-radius: 6px;
+    pointer-events: none;
+  }
+
+  .coord {
+    position: absolute;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent-dim);
+    opacity: 0.7;
+  }
+  .coord-top, .coord-bottom {
+    display: flex;
+    left: 18px; right: 18px;
+    justify-content: space-around;
+  }
+  .coord-top { top: 2px; }
+  .coord-bottom { bottom: 1px; }
+  .coord-left, .coord-right {
+    display: flex;
+    flex-direction: column;
+    top: 18px; bottom: 18px;
+    justify-content: space-around;
+    align-items: center;
+  }
+  .coord-left { left: 3px; }
+  .coord-right { right: 3px; }
+
+  canvas {
+    display: block;
+    border-radius: 3px;
+    cursor: pointer;
+  }
+
+  .sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 220px;
+    flex-shrink: 0;
+  }
+
+  .back-link {
+    font-size: 13px;
+    color: var(--cream-dim);
+    text-decoration: none;
+    transition: color 0.2s;
+    margin-bottom: -10px;
+  }
+  .back-link:hover { color: var(--accent); }
+
+  .game-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    line-height: 1;
+  }
+  .game-title span {
+    display: block;
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--cream-dim);
+    letter-spacing: 6px;
+    margin-top: 4px;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  /* ── Mode Selector ── */
+  .mode-panel {
+    padding: 14px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .mode-panel h3 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent-dim);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 10px;
+  }
+  .mode-toggle {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+  .mode-btn {
+    flex: 1;
+    padding: 8px 6px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--cream-dim);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+  }
+  .mode-btn:hover {
+    border-color: var(--accent-dim);
+    color: var(--cream);
+  }
+  .mode-btn.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(46,204,113,0.08);
+  }
+  .diff-section {
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    transition: max-height 0.3s ease, opacity 0.25s ease, margin-top 0.3s ease;
+    margin-top: 0;
+  }
+  .diff-section.visible {
+    max-height: 120px;
+    opacity: 1;
+    margin-top: 10px;
+  }
+  .diff-label {
+    font-size: 11px;
+    color: var(--cream-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+  }
+  .diff-btns {
+    display: flex;
+    gap: 6px;
+  }
+  .diff-btn {
+    flex: 1;
+    padding: 7px 4px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--cream-dim);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+  }
+  .diff-btn:hover {
+    border-color: var(--accent-dim);
+    color: var(--cream);
+  }
+  .diff-btn.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(46,204,113,0.08);
+  }
+
+  .model-select {
+    width: 100%;
+    padding: 7px 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    cursor: pointer;
+    outline: none;
+  }
+  .model-select:focus {
+    border-color: var(--accent-dim);
+  }
+
+  .turn-indicator {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    transition: border-color 0.3s;
+  }
+  .turn-indicator.active-black { border-color: #555; }
+  .turn-indicator.active-white { border-color: #ddd; }
+
+  .turn-disc {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+  }
+  .turn-disc.black { background: radial-gradient(circle at 35% 35%, #555, #1a1a1a 70%); }
+  .turn-disc.white { background: radial-gradient(circle at 35% 35%, #fff, #c0c0c0 70%); }
+
+  .turn-text {
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .turn-label {
+    font-size: 11px;
+    color: var(--cream-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .score-panel {
+    padding: 16px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .score-panel h3 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent-dim);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+  }
+  .score-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+  }
+  .score-row + .score-row { border-top: 1px solid var(--border); }
+  .score-label { font-size: 13px; color: var(--cream-dim); }
+  .score-value { font-family: 'Cormorant Garamond', serif; font-size: 20px; font-weight: 700; }
+  .score-value.black-val { color: #bbb; }
+  .score-value.white-val { color: #fff; }
+
+  .status-msg {
+    padding: 14px 18px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--cream-dim);
+    line-height: 1.5;
+    height: 67px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    transition: all 0.3s;
+  }
+  .status-msg.winner {
+    border-color: var(--accent);
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .status-msg.thinking {
+    border-color: #ddd;
+    color: var(--cream-dim);
+  }
+
+  .btn-new {
+    padding: 12px 20px;
+    background: transparent;
+    border: 1px solid var(--accent-dim);
+    border-radius: 6px;
+    color: var(--accent);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-new:hover {
+    background: rgba(46,204,113,0.1);
+    border-color: var(--accent);
+  }
+
+  /* Thinking dots animation */
+  @keyframes dotPulse {
+    0%, 80%, 100% { opacity: 0.2; }
+    40% { opacity: 1; }
+  }
+  .thinking-dots span {
+    animation: dotPulse 1.4s infinite;
+    font-size: 18px;
+    letter-spacing: 2px;
+  }
+  .thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+  /* ── Chat Panel ── */
+  .chat-spacer {
+    width: 220px;
+    flex-shrink: 0;
+  }
+  .chat-panel {
+    display: none;
+    flex-direction: column;
+    width: 340px;
+    flex-shrink: 0;
+    height: 612px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .chat-panel.visible { display: flex; }
+
+  .chat-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent-dim);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    flex-shrink: 0;
+  }
+
+  .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .chat-bubble {
+    max-width: 85%;
+    padding: 8px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    line-height: 1.45;
+    word-wrap: break-word;
+    animation: fadeIn 0.2s ease;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .chat-bubble.user {
+    align-self: flex-end;
+    background: rgba(46,204,113,0.15);
+    color: var(--cream);
+    border-bottom-right-radius: 4px;
+  }
+  .chat-bubble.llm {
+    align-self: flex-start;
+    background: rgba(255,255,255,0.1);
+    color: var(--cream);
+    border-bottom-left-radius: 4px;
+  }
+  .chat-bubble.system {
+    align-self: center;
+    background: transparent;
+    color: var(--cream-dim);
+    font-size: 11px;
+    font-style: italic;
+    padding: 4px 8px;
+  }
+  .chat-bubble.llm-typing {
+    align-self: flex-start;
+    background: rgba(255,255,255,0.06);
+    color: var(--cream-dim);
+    border-bottom-left-radius: 4px;
+  }
+
+  .chat-input-row {
+    display: flex;
+    gap: 6px;
+    padding: 10px 12px;
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .chat-input {
+    flex: 1;
+    padding: 8px 10px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .chat-input:focus { border-color: var(--accent-dim); }
+  .chat-input::placeholder { color: var(--cream-dim); opacity: 0.5; }
+
+  .chat-send {
+    padding: 8px 14px;
+    background: rgba(46,204,113,0.15);
+    border: 1px solid rgba(46,204,113,0.3);
+    border-radius: 6px;
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .chat-send:hover {
+    background: rgba(46,204,113,0.25);
+    border-color: var(--accent);
+  }
+
+  @media (max-width: 1000px) {
+    .game-container { flex-direction: column; gap: 20px; }
+    .sidebar { flex-direction: row; flex-wrap: wrap; min-width: unset; width: auto !important; }
+    .sidebar > * { flex: 1; min-width: 140px; }
+    .chat-panel { width: 100%; height: 300px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="game-container">
+  <div class="sidebar">
+    <a href="index.html" class="back-link">&larr; Back</a>
+    <div class="game-title">Othello<span>Classic Board Game</span></div>
+
+    <div class="mode-panel">
+      <h3>Game Mode</h3>
+      <div class="mode-toggle">
+        <button class="mode-btn active" data-mode="1p" id="btn1P">1 Player</button>
+        <button class="mode-btn" data-mode="llm" id="btnLLM">vs LLM</button>
+        <button class="mode-btn" data-mode="2p" id="btn2P">2 Player</button>
+      </div>
+      <div class="diff-section visible" id="diffSection">
+        <div class="diff-label">Difficulty</div>
+        <div class="diff-btns">
+          <button class="diff-btn" data-diff="easy" id="diffEasy">Easy</button>
+          <button class="diff-btn active" data-diff="medium" id="diffMedium">Medium</button>
+          <button class="diff-btn" data-diff="hard" id="diffHard">Hard</button>
+        </div>
+      </div>
+      <div class="diff-section" id="llmSection">
+        <div class="diff-label">Ollama Model</div>
+        <select id="modelSelect" class="model-select">
+          <option>Loading models...</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="turn-indicator" id="turnIndicator">
+      <div class="turn-disc black" id="turnDisc"></div>
+      <div>
+        <div class="turn-label">Current Turn</div>
+        <div class="turn-text" id="turnText">Black moves</div>
+      </div>
+    </div>
+
+    <div class="score-panel">
+      <h3>Score</h3>
+      <div class="score-row">
+        <span class="score-label">Black <small style="opacity:0.5" id="youLabel">(you)</small></span>
+        <span class="score-value black-val" id="scoreBlack">2</span>
+      </div>
+      <div class="score-row">
+        <span class="score-label">White <small style="opacity:0.5" id="cpuLabel">(cpu)</small></span>
+        <span class="score-value white-val" id="scoreWhite">2</span>
+      </div>
+    </div>
+
+    <div class="status-msg" id="statusMsg">Place a disc to begin.</div>
+
+    <button class="btn-new" id="btnNew">New Game</button>
+  </div>
+
+  <div class="board-frame">
+    <div class="coord coord-top" id="coordTop"></div>
+    <div class="coord coord-bottom" id="coordBottom"></div>
+    <div class="coord coord-left" id="coordLeft"></div>
+    <div class="coord coord-right" id="coordRight"></div>
+    <canvas id="board"></canvas>
+  </div>
+
+  <div class="chat-panel" id="chatPanel">
+    <div class="chat-header">Trash Talk</div>
+    <div class="chat-messages" id="chatMessages">
+      <div class="chat-bubble system">Chat with the LLM opponent. It bites back.</div>
+    </div>
+    <div class="chat-input-row">
+      <input type="text" class="chat-input" id="chatInput" placeholder="Talk trash..." maxlength="200" autocomplete="off">
+      <button class="chat-send" id="chatSend">Send</button>
+    </div>
+  </div>
+  <div class="chat-spacer" id="chatSpacer"></div>
+</div>
+
+<script>
+// ── Constants ──
+const EMPTY = 0, BLACK = 1, WHITE = 2;
+const SQ = 68;
+const BOARD_PX = SQ * 8;
+
+// ── Audio ──
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx;
+function ensureAudio() { if (!audioCtx) audioCtx = new AudioCtx(); }
+
+function playSound(type) {
+  ensureAudio();
+  const actx = audioCtx;
+  const now = actx.currentTime;
+  const g = actx.createGain();
+  g.connect(actx.destination);
+
+  if (type === 'place') {
+    const o = actx.createOscillator();
+    o.type = 'sine'; o.frequency.setValueAtTime(520, now);
+    o.frequency.exponentialRampToValueAtTime(340, now + 0.07);
+    g.gain.setValueAtTime(0.09, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+    o.connect(g); o.start(now); o.stop(now + 0.09);
+  } else if (type === 'flip') {
+    const o = actx.createOscillator();
+    o.type = 'triangle'; o.frequency.setValueAtTime(300, now);
+    o.frequency.exponentialRampToValueAtTime(500, now + 0.06);
+    g.gain.setValueAtTime(0.06, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+    o.connect(g); o.start(now); o.stop(now + 0.08);
+  } else if (type === 'gameover') {
+    [392, 494, 587, 784].forEach((f, i) => {
+      const o = actx.createOscillator();
+      const gg = actx.createGain();
+      o.type = 'sine'; o.frequency.value = f;
+      gg.gain.setValueAtTime(0, now + i * 0.12);
+      gg.gain.linearRampToValueAtTime(0.08, now + i * 0.12 + 0.03);
+      gg.gain.exponentialRampToValueAtTime(0.001, now + i * 0.12 + 0.3);
+      o.connect(gg); gg.connect(actx.destination);
+      o.start(now + i * 0.12); o.stop(now + i * 0.12 + 0.3);
+    });
+  }
+}
+
+// ── Canvas Setup ──
+const canvas = document.getElementById('board');
+const ctx = canvas.getContext('2d');
+canvas.width = BOARD_PX;
+canvas.height = BOARD_PX;
+canvas.style.width = BOARD_PX + 'px';
+canvas.style.height = BOARD_PX + 'px';
+
+// ── Coordinates ──
+const cols = ['a','b','c','d','e','f','g','h'];
+['coordTop','coordBottom'].forEach(id => {
+  const el = document.getElementById(id);
+  cols.forEach(c => { const s = document.createElement('span'); s.textContent = c; el.appendChild(s); });
+});
+['coordLeft','coordRight'].forEach(id => {
+  const el = document.getElementById(id);
+  for (let i = 1; i <= 8; i++) { const s = document.createElement('span'); s.textContent = i; el.appendChild(s); }
+});
+
+// ── Felt Texture Generation ──
+let feltTile;
+function generateFeltTile() {
+  feltTile = document.createElement('canvas');
+  feltTile.width = BOARD_PX; feltTile.height = BOARD_PX;
+  const fc = feltTile.getContext('2d');
+  fc.fillStyle = '#1a5c2a';
+  fc.fillRect(0, 0, BOARD_PX, BOARD_PX);
+  // Subtle fabric texture
+  fc.globalAlpha = 0.03;
+  for (let i = 0; i < 2000; i++) {
+    const x = Math.random() * BOARD_PX;
+    const y = Math.random() * BOARD_PX;
+    fc.fillStyle = Math.random() > 0.5 ? '#0d3518' : '#258a3e';
+    fc.fillRect(x, y, Math.random() * 3 + 1, Math.random() * 3 + 1);
+  }
+  fc.globalAlpha = 0.015;
+  for (let i = 0; i < 80; i++) {
+    const y = Math.random() * BOARD_PX;
+    fc.strokeStyle = Math.random() > 0.5 ? '#0a2d16' : '#2ea050';
+    fc.lineWidth = Math.random() * 1.5 + 0.3;
+    fc.beginPath();
+    fc.moveTo(0, y);
+    fc.bezierCurveTo(BOARD_PX * 0.3, y + (Math.random() - 0.5) * 8,
+                      BOARD_PX * 0.7, y + (Math.random() - 0.5) * 8, BOARD_PX, y);
+    fc.stroke();
+  }
+  fc.globalAlpha = 1;
+}
+generateFeltTile();
+
+// ── Game State ──
+let board, turn, gameOver, animating;
+let flipAnimations = []; // { r, c, from, to, progress }
+let hoverCell = null;
+let aiThinking = false;
+let passCount = 0;
+
+// ── Mode & Difficulty ──
+let gameMode = '1p';
+let difficulty = 'medium';
+let llmModel = '';
+const AI_SIDE = WHITE;
+const HUMAN_SIDE = BLACK;
+
+// ── Directions ──
+const DIRS = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
+
+// ── Mode UI ──
+document.getElementById('btn1P').addEventListener('click', () => setMode('1p'));
+document.getElementById('btn2P').addEventListener('click', () => setMode('2p'));
+document.getElementById('btnLLM').addEventListener('click', () => setMode('llm'));
+document.getElementById('diffEasy').addEventListener('click', () => setDifficulty('easy'));
+document.getElementById('diffMedium').addEventListener('click', () => setDifficulty('medium'));
+document.getElementById('diffHard').addEventListener('click', () => setDifficulty('hard'));
+
+function setMode(m) {
+  gameMode = m;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === m));
+  document.getElementById('diffSection').classList.toggle('visible', m === '1p' || m === 'llm');
+  document.getElementById('llmSection').classList.toggle('visible', m === 'llm');
+  const isSingle = m === '1p' || m === 'llm';
+  document.getElementById('youLabel').style.display = isSingle ? '' : 'none';
+  const cpuLabel = document.getElementById('cpuLabel');
+  cpuLabel.style.display = isSingle ? '' : 'none';
+  cpuLabel.textContent = m === 'llm' ? '(llm)' : '(cpu)';
+  showChat(m === 'llm');
+  if (m === 'llm') loadModels();
+  initGame();
+}
+
+function setDifficulty(d) {
+  difficulty = d;
+  document.querySelectorAll('.diff-btn').forEach(b => b.classList.toggle('active', b.dataset.diff === d));
+  initGame();
+}
+
+// ── Ollama Model Loading ──
+async function loadModels() {
+  const sel = document.getElementById('modelSelect');
+  try {
+    const res = await fetch('/api/models');
+    const data = await res.json();
+    if (data.models && data.models.length > 0) {
+      sel.innerHTML = '';
+      data.models.forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        sel.appendChild(opt);
+      });
+      const preferred = data.models.find(m => m.includes('coder:14b')) || data.models[0];
+      sel.value = preferred;
+      llmModel = preferred;
+    }
+  } catch (e) {
+    sel.innerHTML = '<option>Connection error</option>';
+  }
+}
+document.getElementById('modelSelect').addEventListener('change', (e) => {
+  llmModel = e.target.value;
+});
+
+// ── Init ──
+function initGame() {
+  board = Array.from({length: 8}, () => Array(8).fill(EMPTY));
+  // Standard Othello starting position
+  board[3][3] = WHITE; board[3][4] = BLACK;
+  board[4][3] = BLACK; board[4][4] = WHITE;
+  turn = BLACK;
+  gameOver = false;
+  animating = false;
+  flipAnimations = [];
+  aiThinking = false;
+  passCount = 0;
+  moveCount = 0;
+  autoTaunt._lastBlack = 2;
+  autoTaunt._lastWhite = 2;
+  updateUI();
+  draw();
+}
+
+// ── Logic Helpers ──
+function opponent(t) { return t === BLACK ? WHITE : BLACK; }
+
+function isOnBoard(r, c) { return r >= 0 && r < 8 && c >= 0 && c < 8; }
+
+function getFlips(r, c, side, boardState) {
+  if (boardState[r][c] !== EMPTY) return [];
+  const opp = opponent(side);
+  const allFlips = [];
+  for (const [dr, dc] of DIRS) {
+    const flips = [];
+    let nr = r + dr, nc = c + dc;
+    while (isOnBoard(nr, nc) && boardState[nr][nc] === opp) {
+      flips.push([nr, nc]);
+      nr += dr; nc += dc;
+    }
+    if (flips.length > 0 && isOnBoard(nr, nc) && boardState[nr][nc] === side) {
+      allFlips.push(...flips);
+    }
+  }
+  return allFlips;
+}
+
+function getValidMoves(side, boardState) {
+  const moves = [];
+  for (let r = 0; r < 8; r++)
+    for (let c = 0; c < 8; c++) {
+      const flips = getFlips(r, c, side, boardState);
+      if (flips.length > 0) moves.push({ r, c, flips });
+    }
+  return moves;
+}
+
+function countDiscs(boardState) {
+  let b = 0, w = 0;
+  for (let r = 0; r < 8; r++)
+    for (let c = 0; c < 8; c++) {
+      if (boardState[r][c] === BLACK) b++;
+      else if (boardState[r][c] === WHITE) w++;
+    }
+  return { black: b, white: w };
+}
+
+function isAiTurn() {
+  return (gameMode === '1p' || gameMode === 'llm') && turn === AI_SIDE && !gameOver;
+}
+
+// ── Place Disc & Animate Flips ──
+function placeDisc(r, c, onComplete) {
+  const flips = getFlips(r, c, turn, board);
+  if (flips.length === 0) return;
+
+  board[r][c] = turn;
+  playSound('place');
+
+  // Start flip animations
+  const side = turn;
+  flipAnimations = flips.map(([fr, fc]) => ({
+    r: fr, c: fc, from: opponent(side), to: side, progress: 0
+  }));
+  animating = true;
+
+  // Apply flips to board state immediately (for logic), animation is visual only
+  for (const [fr, fc] of flips) {
+    board[fr][fc] = side;
+  }
+
+  passCount = 0;
+
+  // Advance turn
+  const nextSide = opponent(side);
+  const nextMoves = getValidMoves(nextSide, board);
+  if (nextMoves.length > 0) {
+    turn = nextSide;
+  } else {
+    // Next player has no moves, check if current player can still move
+    const currentMoves = getValidMoves(side, board);
+    if (currentMoves.length > 0) {
+      // Turn stays with current side, opponent passes
+      passCount = 1;
+    } else {
+      // Neither can move - game over
+      gameOver = true;
+    }
+  }
+
+  updateUI();
+
+  // Animate flips
+  const flipDuration = 300;
+  const startTime = performance.now();
+
+  function animateFlips(now) {
+    const elapsed = now - startTime;
+    const t = Math.min(elapsed / flipDuration, 1);
+    for (const fa of flipAnimations) {
+      fa.progress = t;
+    }
+    draw();
+    if (t < 1) {
+      requestAnimationFrame(animateFlips);
+    } else {
+      flipAnimations = [];
+      animating = false;
+      if (flipAnimations.length === 0 && flips.length > 0) {
+        playSound('flip');
+      }
+      draw();
+
+      if (gameOver) {
+        playSound('gameover');
+      }
+
+      if (onComplete) onComplete();
+    }
+  }
+  requestAnimationFrame(animateFlips);
+}
+
+// ── Drawing ──
+function draw() {
+  ctx.clearRect(0, 0, BOARD_PX, BOARD_PX);
+  drawBoard();
+  drawValidMoveHints();
+  drawPieces();
+  drawHover();
+}
+
+function drawBoard() {
+  // Draw felt background
+  ctx.drawImage(feltTile, 0, 0);
+  // Draw grid lines
+  ctx.strokeStyle = 'rgba(10, 60, 20, 0.7)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 8; i++) {
+    ctx.beginPath();
+    ctx.moveTo(i * SQ, 0); ctx.lineTo(i * SQ, BOARD_PX);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(0, i * SQ); ctx.lineTo(BOARD_PX, i * SQ);
+    ctx.stroke();
+  }
+  // Small dots at the 4 star points
+  ctx.fillStyle = 'rgba(10, 60, 20, 0.9)';
+  for (const [r, c] of [[2,2],[2,6],[6,2],[6,6]]) {
+    ctx.beginPath();
+    ctx.arc(c * SQ, r * SQ, 4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function drawValidMoveHints() {
+  if (animating || gameOver) return;
+  if (isAiTurn()) return;
+  const moves = getValidMoves(turn, board);
+  for (const m of moves) {
+    const cx = m.c * SQ + SQ / 2;
+    const cy = m.r * SQ + SQ / 2;
+    ctx.beginPath();
+    ctx.arc(cx, cy, SQ * 0.15, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(46, 204, 113, 0.3)';
+    ctx.fill();
+  }
+}
+
+function drawHover() {
+  if (!hoverCell || animating || gameOver || isAiTurn()) return;
+  const { r, c } = hoverCell;
+  const flips = getFlips(r, c, turn, board);
+  if (flips.length > 0) {
+    ctx.fillStyle = 'rgba(46, 204, 113, 0.1)';
+    ctx.fillRect(c * SQ, r * SQ, SQ, SQ);
+  }
+}
+
+function drawDisc(cx, cy, side, scaleX) {
+  // scaleX: 1 = full face, 0 = edge-on (for flip animation)
+  const sx = typeof scaleX === 'number' ? scaleX : 1;
+  const radius = SQ * 0.4;
+  const rx = radius * Math.abs(sx);
+  if (rx < 1) return;
+
+  // Determine which color to show based on flip progress
+  const isBlack = side === BLACK;
+
+  // Shadow
+  ctx.save();
+  ctx.beginPath();
+  ctx.ellipse(cx + 1, cy + 3, rx, radius * 0.3, 0, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  ctx.fill();
+  ctx.restore();
+
+  // Main disc
+  ctx.save();
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, rx, radius, 0, 0, Math.PI * 2);
+
+  const grad = ctx.createRadialGradient(cx - rx * 0.3, cy - radius * 0.3, 0, cx, cy, radius);
+  if (isBlack) {
+    grad.addColorStop(0, '#606060');
+    grad.addColorStop(0.35, '#3a3a3a');
+    grad.addColorStop(0.7, '#1c1c1c');
+    grad.addColorStop(1, '#0a0a0a');
+  } else {
+    grad.addColorStop(0, '#ffffff');
+    grad.addColorStop(0.3, '#f0f0f0');
+    grad.addColorStop(0.7, '#d0d0d0');
+    grad.addColorStop(1, '#aaaaaa');
+  }
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Inner ring
+  if (rx > radius * 0.5) {
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, rx * 0.72, radius * 0.72, 0, 0, Math.PI * 2);
+    ctx.strokeStyle = isBlack ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+
+  // Highlight
+  if (rx > radius * 0.4) {
+    ctx.beginPath();
+    ctx.ellipse(cx - rx * 0.2, cy - radius * 0.25, rx * 0.3, radius * 0.15, -0.5, 0, Math.PI * 2);
+    ctx.fillStyle = isBlack ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.35)';
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+function drawPieces() {
+  const flippingSet = new Set(flipAnimations.map(fa => fa.r + ',' + fa.c));
+
+  for (let r = 0; r < 8; r++)
+    for (let c = 0; c < 8; c++) {
+      const p = board[r][c];
+      if (p === EMPTY) continue;
+      if (flippingSet.has(r + ',' + c)) continue;
+      const cx = c * SQ + SQ / 2;
+      const cy = r * SQ + SQ / 2;
+      drawDisc(cx, cy, p);
+    }
+
+  // Draw flipping discs
+  for (const fa of flipAnimations) {
+    const cx = fa.c * SQ + SQ / 2;
+    const cy = fa.r * SQ + SQ / 2;
+    const t = fa.progress;
+    // First half: shrink showing old color, second half: grow showing new color
+    if (t < 0.5) {
+      const sx = 1 - t * 2; // 1 -> 0
+      drawDisc(cx, cy, fa.from, sx);
+    } else {
+      const sx = (t - 0.5) * 2; // 0 -> 1
+      drawDisc(cx, cy, fa.to, sx);
+    }
+  }
+}
+
+// ── UI Update ──
+function updateUI() {
+  const turnDisc = document.getElementById('turnDisc');
+  const turnText = document.getElementById('turnText');
+  const indicator = document.getElementById('turnIndicator');
+
+  turnDisc.className = 'turn-disc ' + (turn === BLACK ? 'black' : 'white');
+  indicator.className = 'turn-indicator ' + (turn === BLACK ? 'active-black' : 'active-white');
+
+  if (gameMode === '1p' || gameMode === 'llm') {
+    const opName = gameMode === 'llm' ? 'LLM' : 'Computer';
+    turnText.textContent = turn === BLACK ? 'Your turn' : opName + ' thinks\u2026';
+  } else {
+    turnText.textContent = (turn === BLACK ? 'Black' : 'White') + ' moves';
+  }
+
+  const { black, white } = countDiscs(board);
+  document.getElementById('scoreBlack').textContent = black;
+  document.getElementById('scoreWhite').textContent = white;
+
+  const msg = document.getElementById('statusMsg');
+  if (gameOver) {
+    const { black: b, white: w } = countDiscs(board);
+    let result;
+    if (b > w) result = gameMode === '2p' ? 'Black wins!' : 'You win!';
+    else if (w > b) result = gameMode === '2p' ? 'White wins!' : (gameMode === 'llm' ? 'LLM wins!' : 'Computer wins!');
+    else result = 'It\'s a draw!';
+    msg.textContent = result + ' (' + b + ' - ' + w + ')';
+    msg.className = 'status-msg winner';
+  } else if (aiThinking) {
+    const thinkName = gameMode === 'llm' ? 'LLM' : 'Computer';
+    msg.innerHTML = thinkName + ' is thinking <span class="thinking-dots"><span>.</span><span>.</span><span>.</span></span>';
+    msg.className = 'status-msg thinking';
+  } else if (passCount > 0) {
+    msg.textContent = (turn === BLACK ? 'White' : 'Black') + ' has no moves \u2014 turn passed.';
+    msg.className = 'status-msg';
+  } else {
+    const moves = getValidMoves(turn, board);
+    msg.textContent = moves.length + ' move' + (moves.length !== 1 ? 's' : '') + ' available.';
+    msg.className = 'status-msg';
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// ── AI ENGINE ──
+// ══════════════════════════════════════════════════════════════
+
+function cloneBoard(b) { return b.map(row => row.slice()); }
+
+// Positional weight constants
+const CORNER_BONUS = 25;
+const EDGE_BONUS = 5;
+const CORNER_ADJ_PENALTY = -10;
+
+// Corners
+const CORNERS = [[0,0],[0,7],[7,0],[7,7]];
+// Squares adjacent to corners
+const CORNER_ADJ = [
+  // Adjacent to (0,0)
+  [0,1],[1,0],[1,1],
+  // Adjacent to (0,7)
+  [0,6],[1,7],[1,6],
+  // Adjacent to (7,0)
+  [6,0],[7,1],[6,1],
+  // Adjacent to (7,7)
+  [6,7],[7,6],[6,6]
+];
+// Map corner-adjacent squares to their corner
+const CORNER_ADJ_MAP = {
+  '0,1': [0,0], '1,0': [0,0], '1,1': [0,0],
+  '0,6': [0,7], '1,7': [0,7], '1,6': [0,7],
+  '6,0': [7,0], '7,1': [7,0], '6,1': [7,0],
+  '6,7': [7,7], '7,6': [7,7], '6,6': [7,7]
+};
+
+function isEdge(r, c) {
+  return r === 0 || r === 7 || c === 0 || c === 7;
+}
+
+function isCorner(r, c) {
+  return (r === 0 || r === 7) && (c === 0 || c === 7);
+}
+
+// Evaluation from WHITE's perspective (AI)
+function evaluate(boardState) {
+  let score = 0;
+  let blackCount = 0, whiteCount = 0;
+
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const p = boardState[r][c];
+      if (p === EMPTY) continue;
+
+      const sign = p === WHITE ? 1 : -1;
+
+      if (p === WHITE) whiteCount++; else blackCount++;
+
+      // Piece count
+      score += sign;
+
+      // Corner control
+      if (isCorner(r, c)) {
+        score += sign * CORNER_BONUS;
+      }
+      // Edge pieces
+      else if (isEdge(r, c)) {
+        score += sign * EDGE_BONUS;
+      }
+
+      // Penalty for squares adjacent to empty corners
+      const cornerKey = r + ',' + c;
+      if (CORNER_ADJ_MAP[cornerKey]) {
+        const [cr, cc] = CORNER_ADJ_MAP[cornerKey];
+        if (boardState[cr][cc] === EMPTY) {
+          score += sign * CORNER_ADJ_PENALTY;
+        }
+      }
+    }
+  }
+
+  // Mobility: number of available moves
+  const whiteMoves = getValidMoves(WHITE, boardState).length;
+  const blackMoves = getValidMoves(BLACK, boardState).length;
+  score += (whiteMoves - blackMoves);
+
+  return score;
+}
+
+function applyMove(boardState, r, c, side) {
+  const b = cloneBoard(boardState);
+  const flips = getFlips(r, c, side, b);
+  b[r][c] = side;
+  for (const [fr, fc] of flips) {
+    b[fr][fc] = side;
+  }
+  return b;
+}
+
+function getSearchDepth() {
+  const { black, white } = countDiscs(board);
+  const totalDiscs = black + white;
+  const emptySquares = 64 - totalDiscs;
+
+  if (difficulty === 'easy') return 2;
+  if (difficulty === 'medium') return emptySquares <= 10 ? 6 : 4;
+  // hard
+  return emptySquares <= 10 ? 8 : 6;
+}
+
+// Minimax with alpha-beta pruning
+function minimax(boardState, depth, alpha, beta, maximizing) {
+  const side = maximizing ? WHITE : BLACK;
+  const moves = getValidMoves(side, boardState);
+
+  if (depth === 0) {
+    return evaluate(boardState);
+  }
+
+  if (moves.length === 0) {
+    // Pass: check if opponent can move
+    const oppMoves = getValidMoves(opponent(side), boardState);
+    if (oppMoves.length === 0) {
+      // Game over
+      const { black, white } = countDiscs(boardState);
+      if (white > black) return 10000;
+      if (black > white) return -10000;
+      return 0;
+    }
+    // Pass turn
+    return minimax(boardState, depth - 1, alpha, beta, !maximizing);
+  }
+
+  if (maximizing) {
+    let best = -Infinity;
+    for (const move of moves) {
+      const nb = applyMove(boardState, move.r, move.c, side);
+      const val = minimax(nb, depth - 1, alpha, beta, false);
+      best = Math.max(best, val);
+      alpha = Math.max(alpha, val);
+      if (beta <= alpha) break;
+    }
+    return best;
+  } else {
+    let best = Infinity;
+    for (const move of moves) {
+      const nb = applyMove(boardState, move.r, move.c, side);
+      const val = minimax(nb, depth - 1, alpha, beta, true);
+      best = Math.min(best, val);
+      beta = Math.min(beta, val);
+      if (beta <= alpha) break;
+    }
+    return best;
+  }
+}
+
+function aiChooseMove() {
+  const moves = getValidMoves(AI_SIDE, board);
+  if (moves.length === 0) return null;
+  if (moves.length === 1) return moves[0];
+
+  if (difficulty === 'easy') {
+    // Easy: prefer corners, then random
+    const cornerMoves = moves.filter(m => isCorner(m.r, m.c));
+    if (cornerMoves.length > 0) return cornerMoves[Math.floor(Math.random() * cornerMoves.length)];
+    return moves[Math.floor(Math.random() * moves.length)];
+  }
+
+  const depth = getSearchDepth();
+  let bestScore = -Infinity;
+  let bestMoves = [];
+
+  for (const move of moves) {
+    const nb = applyMove(board, move.r, move.c, AI_SIDE);
+    const score = minimax(nb, depth - 1, -Infinity, Infinity, false);
+    if (score > bestScore) {
+      bestScore = score;
+      bestMoves = [move];
+    } else if (score === bestScore) {
+      bestMoves.push(move);
+    }
+  }
+
+  // Slight randomness on medium
+  if (difficulty === 'medium' && Math.random() < 0.1 && moves.length > 1) {
+    return moves[Math.floor(Math.random() * moves.length)];
+  }
+
+  return bestMoves[Math.floor(Math.random() * bestMoves.length)];
+}
+
+function scheduleAiMove() {
+  if (!isAiTurn() || aiThinking || animating || gameOver) return;
+
+  aiThinking = true;
+  updateUI();
+  draw();
+
+  const thinkDelay = gameMode === 'llm' ? 600 : difficulty === 'easy' ? 300 : difficulty === 'medium' ? 500 : 700;
+
+  setTimeout(() => {
+    const move = aiChooseMove();
+    aiThinking = false;
+
+    if (move) {
+      placeDisc(move.r, move.c, () => {
+        if (gameMode === 'llm' && !isAiTurn()) autoTaunt();
+        scheduleAiMove();
+      });
+    } else {
+      // AI passes
+      passCount++;
+      const nextMoves = getValidMoves(HUMAN_SIDE, board);
+      if (nextMoves.length === 0) {
+        gameOver = true;
+        playSound('gameover');
+      } else {
+        turn = HUMAN_SIDE;
+      }
+      updateUI();
+      draw();
+    }
+  }, thinkDelay);
+}
+
+// ── Input ──
+canvas.addEventListener('click', (e) => {
+  if (animating || gameOver || aiThinking) return;
+  if (isAiTurn()) return;
+  ensureAudio();
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = BOARD_PX / rect.width;
+  const scaleY = BOARD_PX / rect.height;
+  const c = Math.floor((e.clientX - rect.left) * scaleX / SQ);
+  const r = Math.floor((e.clientY - rect.top) * scaleY / SQ);
+  if (r < 0 || r > 7 || c < 0 || c > 7) return;
+
+  const flips = getFlips(r, c, turn, board);
+  if (flips.length === 0) return;
+
+  placeDisc(r, c, () => {
+    scheduleAiMove();
+  });
+});
+
+canvas.addEventListener('mousemove', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = BOARD_PX / rect.width;
+  const scaleY = BOARD_PX / rect.height;
+  const c = Math.floor((e.clientX - rect.left) * scaleX / SQ);
+  const r = Math.floor((e.clientY - rect.top) * scaleY / SQ);
+  if (r < 0 || r > 7 || c < 0 || c > 7) {
+    hoverCell = null;
+  } else {
+    hoverCell = { r, c };
+  }
+  if (!animating) draw();
+});
+
+canvas.addEventListener('mouseleave', () => {
+  hoverCell = null;
+  if (!animating) draw();
+});
+
+document.getElementById('btnNew').addEventListener('click', () => {
+  ensureAudio();
+  initGame();
+  if (gameMode === 'llm') {
+    chatSessionId = 'session-' + Date.now();
+    chatMessages.innerHTML = '<div class="chat-bubble system">Chat with the LLM opponent. It bites back.</div>';
+    fetch('/api/chat/clear', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId: chatSessionId })
+    }).catch(() => {});
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
+// ── CHAT ──
+// ══════════════════════════════════════════════════════════════
+
+const chatPanel = document.getElementById('chatPanel');
+const chatMessages = document.getElementById('chatMessages');
+const chatInput = document.getElementById('chatInput');
+const chatSend = document.getElementById('chatSend');
+let chatSessionId = 'session-' + Date.now();
+let chatBusy = false;
+
+function showChat(visible) {
+  chatPanel.classList.toggle('visible', visible);
+  document.getElementById('chatSpacer').style.display = visible ? 'none' : 'block';
+}
+
+function addChatBubble(text, type) {
+  const bubble = document.createElement('div');
+  bubble.className = 'chat-bubble ' + type;
+  bubble.textContent = text;
+  chatMessages.appendChild(bubble);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+  return bubble;
+}
+
+// ── Board serialization for LLM ──
+function boardToString() {
+  const colLabels = '    a   b   c   d   e   f   g   h';
+  let s = colLabels + '\n  +---+---+---+---+---+---+---+---+\n';
+  for (let r = 0; r < 8; r++) {
+    s += (r + 1) + ' |';
+    for (let c = 0; c < 8; c++) {
+      const p = board[r][c];
+      let ch = '.';
+      if (p === BLACK) ch = 'B';
+      else if (p === WHITE) ch = 'W';
+      s += ' ' + ch + ' |';
+    }
+    s += ' ' + (r + 1) + '\n  +---+---+---+---+---+---+---+---+\n';
+  }
+  s += colLabels;
+  return s;
+}
+
+function getGameStatus() {
+  const { black, white } = countDiscs(board);
+  let status = `Black (human) has ${black} discs. White (you, the LLM) has ${white} discs. `;
+  if (black > white) status += `You are LOSING by ${black - white} disc${black-white>1?'s':''}! The human is beating you! `;
+  else if (white > black) status += `You are WINNING by ${white - black} disc${white-black>1?'s':''}! You're crushing them! `;
+  else status += `The game is TIED. `;
+  if (gameOver) {
+    if (white > black) {
+      status += `GAME OVER -- YOU (White) WON! The human has been defeated!`;
+    } else if (black > white) {
+      status += `GAME OVER -- YOU (White) LOST! The human beat you!`;
+    } else {
+      status += `GAME OVER -- It's a DRAW!`;
+    }
+  } else {
+    status += `Game in progress. ${turn === BLACK ? "Human's" : "Your"} turn.`;
+  }
+  return status;
+}
+
+async function sendChat() {
+  const text = chatInput.value.trim();
+  if (!text || chatBusy) return;
+
+  chatInput.value = '';
+  addChatBubble(text, 'user');
+
+  chatBusy = true;
+  const typingBubble = addChatBubble('...', 'llm-typing');
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: text,
+        model: llmModel || 'qwen2.5-coder:14b',
+        board: boardToString(),
+        sessionId: chatSessionId,
+        gameStatus: getGameStatus(),
+        gameName: 'othello'
+      })
+    });
+    const data = await res.json();
+    typingBubble.remove();
+    addChatBubble(data.reply || '...', 'llm');
+  } catch (e) {
+    typingBubble.remove();
+    addChatBubble('*connection lost*', 'system');
+  }
+  chatBusy = false;
+}
+
+chatSend.addEventListener('click', sendChat);
+chatInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') sendChat();
+});
+
+// Auto-taunt: LLM talks trash after its own moves
+let moveCount = 0;
+async function autoTaunt() {
+  if (gameMode !== 'llm' || chatBusy) return;
+  moveCount++;
+
+  const { black, white } = countDiscs(board);
+  const gainedDiscs = white > (autoTaunt._lastWhite || 2);
+  const lostDiscs = black > (autoTaunt._lastBlack || 2);
+  autoTaunt._lastWhite = white;
+  autoTaunt._lastBlack = black;
+
+  const shouldTaunt = moveCount === 1 || gameOver || gainedDiscs || Math.random() < 0.4;
+  if (!shouldTaunt) return;
+
+  chatBusy = true;
+  const typingBubble = addChatBubble('...', 'llm-typing');
+
+  const prompts = [
+    '*just made a move* React to your own move with trash talk.',
+    '*just made a move* Taunt the human about what you just did.',
+    '*just made a move* Say something cocky about the game.',
+  ];
+  if (gainedDiscs) {
+    prompts.push('*just flipped several discs* Celebrate and mock the human for losing territory.');
+    prompts.push('*just flipped their discs* Rub it in hard.');
+  }
+  if (gameOver && white > black) {
+    prompts.length = 0;
+    prompts.push('*you just won the game* Gloat mercilessly. You destroyed them at Othello.');
+  }
+  if (gameOver && black >= white) {
+    prompts.length = 0;
+    prompts.push('*you just lost the game* Be dramatically salty. Demand a rematch at Othello.');
+  }
+  const tauntPrompt = prompts[Math.floor(Math.random() * prompts.length)];
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: tauntPrompt,
+        model: llmModel || 'qwen2.5-coder:14b',
+        board: boardToString(),
+        sessionId: chatSessionId,
+        gameStatus: getGameStatus(),
+        gameName: 'othello'
+      })
+    });
+    const data = await res.json();
+    typingBubble.remove();
+    addChatBubble(data.reply || '...', 'llm');
+  } catch (e) {
+    typingBubble.remove();
+  }
+  chatBusy = false;
+}
+autoTaunt._lastBlack = 2;
+autoTaunt._lastWhite = 2;
+
+// ── Start ──
+initGame();
+</script>
+
+</body>
+</html>

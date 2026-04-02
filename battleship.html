@@ -1,0 +1,1785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Battleship</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@400;500;600&display=swap');
+
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+
+  :root {
+    --bg: #0a0e14;
+    --surface: #0f1923;
+    --surface-2: #131d2a;
+    --border: #1a3050;
+    --accent: #4488cc;
+    --accent-dim: #2a5a8a;
+    --cream: #c8d8e8;
+    --cream-dim: #6888a8;
+    --hit-red: #cc3333;
+    --hit-glow: #ff4444;
+    --miss-blue: #2266aa;
+    --ship-grey: #556677;
+    --sunk-dark: #333844;
+  }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: var(--bg);
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    overflow: hidden;
+  }
+
+  body {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: max(10px, calc(50vh - 400px));
+    background:
+      radial-gradient(ellipse at 30% 20%, rgba(40,80,140,0.06) 0%, transparent 60%),
+      radial-gradient(ellipse at 70% 80%, rgba(20,60,100,0.05) 0%, transparent 60%),
+      var(--bg);
+  }
+
+  .back-link {
+    position: fixed;
+    top: 16px;
+    left: 20px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    color: var(--cream-dim);
+    text-decoration: none;
+    letter-spacing: 1px;
+    transition: color 0.2s;
+    z-index: 100;
+  }
+  .back-link:hover { color: var(--accent); }
+
+  .game-container {
+    display: flex;
+    gap: 30px;
+    align-items: flex-start;
+    user-select: none;
+  }
+
+  .board-frame {
+    position: relative;
+    flex-shrink: 0;
+    padding: 14px;
+    background: linear-gradient(145deg, #1a2a3e, #0c1a2e, #142438);
+    border-radius: 8px;
+    box-shadow:
+      0 2px 4px rgba(0,0,0,0.4),
+      0 8px 24px rgba(0,0,0,0.5),
+      0 20px 60px rgba(0,0,0,0.4),
+      inset 0 1px 0 rgba(68,136,204,0.06);
+  }
+
+  .board-frame::before {
+    content: '';
+    position: absolute;
+    inset: 4px;
+    border: 1px solid rgba(68,136,204,0.12);
+    border-radius: 6px;
+    pointer-events: none;
+  }
+
+  .grid-section {
+    position: relative;
+  }
+  .grid-section + .grid-section { margin-top: 10px; }
+
+  .grid-label {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent-dim);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    text-align: center;
+    margin-bottom: 4px;
+  }
+
+  .grid-wrapper {
+    position: relative;
+    display: inline-block;
+  }
+
+  .coord {
+    position: absolute;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--accent-dim);
+    opacity: 0.7;
+  }
+  .coord-top, .coord-bottom {
+    display: flex;
+    left: 0; right: 0;
+    justify-content: space-around;
+  }
+  .coord-top { top: -14px; }
+  .coord-bottom { bottom: -14px; }
+  .coord-left, .coord-right {
+    display: flex;
+    flex-direction: column;
+    top: 0; bottom: 0;
+    justify-content: space-around;
+    align-items: center;
+  }
+  .coord-left { left: -16px; }
+  .coord-right { right: -16px; }
+
+  canvas {
+    display: block;
+    border-radius: 3px;
+    cursor: pointer;
+  }
+
+  .sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: 220px;
+    flex-shrink: 0;
+  }
+
+  .game-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    line-height: 1;
+  }
+  .game-title span {
+    display: block;
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--cream-dim);
+    letter-spacing: 5px;
+    margin-top: 4px;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .mode-panel {
+    padding: 14px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .mode-panel h3 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent-dim);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 10px;
+  }
+  .mode-toggle {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+  .mode-btn {
+    flex: 1;
+    padding: 8px 6px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--cream-dim);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+  }
+  .mode-btn:hover {
+    border-color: var(--accent-dim);
+    color: var(--cream);
+  }
+  .mode-btn.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(68,136,204,0.08);
+  }
+  .diff-section {
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    transition: max-height 0.3s ease, opacity 0.25s ease, margin-top 0.3s ease;
+    margin-top: 0;
+  }
+  .diff-section.visible {
+    max-height: 120px;
+    opacity: 1;
+    margin-top: 10px;
+  }
+  .diff-label {
+    font-size: 11px;
+    color: var(--cream-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+  }
+  .diff-btns {
+    display: flex;
+    gap: 6px;
+  }
+  .diff-btn {
+    flex: 1;
+    padding: 7px 4px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--cream-dim);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+  }
+  .diff-btn:hover {
+    border-color: var(--accent-dim);
+    color: var(--cream);
+  }
+  .diff-btn.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(68,136,204,0.08);
+  }
+
+  .model-select {
+    width: 100%;
+    padding: 7px 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    cursor: pointer;
+    outline: none;
+  }
+  .model-select:focus {
+    border-color: var(--accent-dim);
+  }
+
+  .turn-indicator {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    transition: border-color 0.3s;
+  }
+  .turn-indicator.active-player { border-color: var(--accent); }
+  .turn-indicator.active-enemy { border-color: var(--hit-red); }
+
+  .turn-icon {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+  }
+  .turn-icon.player { background: radial-gradient(circle at 35% 35%, #5599dd, #1a4477 70%); }
+  .turn-icon.enemy { background: radial-gradient(circle at 35% 35%, #dd5555, #771a1a 70%); }
+
+  .turn-text {
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .turn-label {
+    font-size: 11px;
+    color: var(--cream-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .score-panel {
+    padding: 14px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .score-panel h3 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent-dim);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 10px;
+  }
+  .fleet-section {
+    margin-bottom: 8px;
+  }
+  .fleet-section:last-child { margin-bottom: 0; }
+  .fleet-label {
+    font-size: 12px;
+    color: var(--cream-dim);
+    margin-bottom: 4px;
+  }
+  .fleet-ships {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+  .ship-pip {
+    padding: 2px 6px;
+    background: rgba(68,136,204,0.15);
+    border: 1px solid rgba(68,136,204,0.25);
+    border-radius: 3px;
+    font-size: 10px;
+    color: var(--accent);
+    white-space: nowrap;
+  }
+  .ship-pip.sunk {
+    background: rgba(204,51,51,0.15);
+    border-color: rgba(204,51,51,0.3);
+    color: var(--hit-red);
+    text-decoration: line-through;
+    opacity: 0.6;
+  }
+
+  .status-msg {
+    padding: 14px 18px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--cream-dim);
+    line-height: 1.5;
+    height: 67px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    transition: all 0.3s;
+  }
+  .status-msg.winner {
+    border-color: var(--accent);
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .status-msg.thinking {
+    border-color: var(--hit-red);
+    color: var(--cream-dim);
+  }
+  .status-msg.placing {
+    border-color: var(--accent-dim);
+    color: var(--accent);
+  }
+
+  .btn-new {
+    padding: 12px 20px;
+    background: transparent;
+    border: 1px solid var(--accent-dim);
+    border-radius: 6px;
+    color: var(--accent);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-new:hover {
+    background: rgba(68,136,204,0.1);
+    border-color: var(--accent);
+  }
+
+  .btn-rotate {
+    padding: 8px 14px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--cream-dim);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    width: 100%;
+    margin-top: 6px;
+  }
+  .btn-rotate:hover {
+    border-color: var(--accent-dim);
+    color: var(--cream);
+  }
+
+  @keyframes dotPulse {
+    0%, 80%, 100% { opacity: 0.2; }
+    40% { opacity: 1; }
+  }
+  .thinking-dots span {
+    animation: dotPulse 1.4s infinite;
+    font-size: 18px;
+    letter-spacing: 2px;
+  }
+  .thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+  /* ── Chat Panel ── */
+  .chat-spacer {
+    width: 220px;
+    flex-shrink: 0;
+  }
+  .chat-panel {
+    display: none;
+    flex-direction: column;
+    width: 340px;
+    flex-shrink: 0;
+    height: 780px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .chat-panel.visible { display: flex; }
+
+  .chat-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent-dim);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    flex-shrink: 0;
+  }
+
+  .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .chat-bubble {
+    max-width: 85%;
+    padding: 8px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    line-height: 1.45;
+    word-wrap: break-word;
+    animation: fadeIn 0.2s ease;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .chat-bubble.user {
+    align-self: flex-end;
+    background: rgba(68,136,204,0.15);
+    color: var(--cream);
+    border-bottom-right-radius: 4px;
+  }
+  .chat-bubble.llm {
+    align-self: flex-start;
+    background: rgba(204,51,51,0.15);
+    color: var(--cream);
+    border-bottom-left-radius: 4px;
+  }
+  .chat-bubble.system {
+    align-self: center;
+    background: transparent;
+    color: var(--cream-dim);
+    font-size: 11px;
+    font-style: italic;
+    padding: 4px 8px;
+  }
+  .chat-bubble.llm-typing {
+    align-self: flex-start;
+    background: rgba(204,51,51,0.1);
+    color: var(--cream-dim);
+    border-bottom-left-radius: 4px;
+  }
+
+  .chat-input-row {
+    display: flex;
+    gap: 6px;
+    padding: 10px 12px;
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .chat-input {
+    flex: 1;
+    padding: 8px 10px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .chat-input:focus { border-color: var(--accent-dim); }
+  .chat-input::placeholder { color: var(--cream-dim); opacity: 0.5; }
+
+  .chat-send {
+    padding: 8px 14px;
+    background: rgba(204,51,51,0.2);
+    border: 1px solid rgba(204,51,51,0.3);
+    border-radius: 6px;
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .chat-send:hover {
+    background: rgba(204,51,51,0.3);
+    border-color: var(--hit-red);
+  }
+
+  @media (max-width: 1000px) {
+    .game-container { flex-direction: column; gap: 20px; }
+    .sidebar { flex-direction: row; flex-wrap: wrap; min-width: unset; width: auto !important; }
+    .sidebar > * { flex: 1; min-width: 140px; }
+    .chat-panel { width: 100%; height: 300px; }
+  }
+</style>
+</head>
+<body>
+
+<a href="index.html" class="back-link">&larr; Back</a>
+
+<div class="game-container">
+  <div class="sidebar">
+    <div class="game-title">Battleship<span>Naval Warfare</span></div>
+
+    <div class="mode-panel">
+      <h3>Game Mode</h3>
+      <div class="mode-toggle">
+        <button class="mode-btn active" data-mode="1p" id="btn1P">1 Player</button>
+        <button class="mode-btn" data-mode="llm" id="btnLLM">vs LLM</button>
+      </div>
+      <div class="diff-section visible" id="diffSection">
+        <div class="diff-label">Difficulty</div>
+        <div class="diff-btns">
+          <button class="diff-btn" data-diff="1" id="diffEasy">Easy</button>
+          <button class="diff-btn active" data-diff="2" id="diffMedium">Medium</button>
+          <button class="diff-btn" data-diff="3" id="diffHard">Hard</button>
+        </div>
+      </div>
+      <div class="diff-section" id="llmSection">
+        <div class="diff-label">Ollama Model</div>
+        <select id="modelSelect" class="model-select">
+          <option>Loading models...</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="turn-indicator" id="turnIndicator">
+      <div class="turn-icon player" id="turnIcon"></div>
+      <div>
+        <div class="turn-label">Phase</div>
+        <div class="turn-text" id="turnText">Place your ships</div>
+      </div>
+    </div>
+
+    <div class="score-panel">
+      <h3>Fleet Status</h3>
+      <div class="fleet-section">
+        <div class="fleet-label">Your Fleet</div>
+        <div class="fleet-ships" id="playerFleet"></div>
+      </div>
+      <div class="fleet-section" style="margin-top:10px">
+        <div class="fleet-label">Enemy Fleet</div>
+        <div class="fleet-ships" id="enemyFleet"></div>
+      </div>
+    </div>
+
+    <div class="status-msg placing" id="statusMsg">Click on your grid to place ships. Press R to rotate.</div>
+
+    <button class="btn-new" id="btnNew">New Game</button>
+    <button class="btn-rotate" id="btnRotate">Rotate Ship (R)</button>
+  </div>
+
+  <div class="board-frame">
+    <div class="grid-section">
+      <div class="grid-label">Enemy Waters</div>
+      <div class="grid-wrapper" id="enemyWrapper">
+        <div class="coord coord-top" id="eCoordTop"></div>
+        <div class="coord coord-left" id="eCoordLeft"></div>
+        <canvas id="enemyCanvas"></canvas>
+      </div>
+    </div>
+    <div class="grid-section">
+      <div class="grid-label">Your Fleet</div>
+      <div class="grid-wrapper" id="playerWrapper">
+        <div class="coord coord-top" id="pCoordTop"></div>
+        <div class="coord coord-left" id="pCoordLeft"></div>
+        <canvas id="playerCanvas"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="chat-panel" id="chatPanel">
+    <div class="chat-header">Radio Chatter</div>
+    <div class="chat-messages" id="chatMessages">
+      <div class="chat-bubble system">Hail the enemy commander. They will respond.</div>
+    </div>
+    <div class="chat-input-row">
+      <input type="text" class="chat-input" id="chatInput" placeholder="Transmit message..." maxlength="200" autocomplete="off">
+      <button class="chat-send" id="chatSend">Send</button>
+    </div>
+  </div>
+  <div class="chat-spacer" id="chatSpacer"></div>
+</div>
+
+<script>
+// ── Constants ──
+const CELL = 36;
+const GRID = 10;
+const BOARD_PX = CELL * GRID;
+const SHIPS = [
+  { name: 'Carrier', size: 5 },
+  { name: 'Battleship', size: 4 },
+  { name: 'Cruiser', size: 3 },
+  { name: 'Submarine', size: 3 },
+  { name: 'Destroyer', size: 2 }
+];
+
+// Cell states
+const WATER = 0, SHIP = 1, HIT = 2, MISS = 3, SUNK = 4;
+
+// ── Audio ──
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx;
+function ensureAudio() { if (!audioCtx) audioCtx = new AudioCtx(); }
+
+function playSound(type) {
+  ensureAudio();
+  const actx = audioCtx;
+  const now = actx.currentTime;
+  const g = actx.createGain();
+  g.connect(actx.destination);
+
+  if (type === 'splash') {
+    // Watery miss sound - white noise burst
+    const buf = actx.createBuffer(1, actx.sampleRate * 0.15, actx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (actx.sampleRate * 0.04));
+    const src = actx.createBufferSource();
+    src.buffer = buf;
+    const filt = actx.createBiquadFilter();
+    filt.type = 'lowpass'; filt.frequency.value = 800;
+    g.gain.setValueAtTime(0.1, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+    src.connect(filt); filt.connect(g); src.start(now); src.stop(now + 0.15);
+  } else if (type === 'explosion') {
+    // Deep explosion hit
+    const buf = actx.createBuffer(1, actx.sampleRate * 0.3, actx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (actx.sampleRate * 0.08));
+    const src = actx.createBufferSource();
+    src.buffer = buf;
+    const filt = actx.createBiquadFilter();
+    filt.type = 'lowpass'; filt.frequency.value = 400;
+    filt.frequency.exponentialRampToValueAtTime(100, now + 0.3);
+    g.gain.setValueAtTime(0.2, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+    src.connect(filt); filt.connect(g); src.start(now); src.stop(now + 0.3);
+    // Add rumble
+    const o = actx.createOscillator();
+    const g2 = actx.createGain();
+    o.type = 'sine'; o.frequency.setValueAtTime(60, now);
+    o.frequency.exponentialRampToValueAtTime(30, now + 0.25);
+    g2.gain.setValueAtTime(0.15, now);
+    g2.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+    o.connect(g2); g2.connect(actx.destination);
+    o.start(now); o.stop(now + 0.25);
+  } else if (type === 'siren') {
+    // Ship sunk siren
+    [220, 330, 440, 330, 220].forEach((f, i) => {
+      const o = actx.createOscillator();
+      const gg = actx.createGain();
+      o.type = 'sawtooth'; o.frequency.value = f;
+      gg.gain.setValueAtTime(0, now + i * 0.1);
+      gg.gain.linearRampToValueAtTime(0.06, now + i * 0.1 + 0.02);
+      gg.gain.exponentialRampToValueAtTime(0.001, now + i * 0.1 + 0.1);
+      o.connect(gg); gg.connect(actx.destination);
+      o.start(now + i * 0.1); o.stop(now + i * 0.1 + 0.1);
+    });
+  } else if (type === 'win') {
+    [392, 494, 587, 784].forEach((f, i) => {
+      const o = actx.createOscillator();
+      const gg = actx.createGain();
+      o.type = 'sine'; o.frequency.value = f;
+      gg.gain.setValueAtTime(0, now + i * 0.12);
+      gg.gain.linearRampToValueAtTime(0.08, now + i * 0.12 + 0.03);
+      gg.gain.exponentialRampToValueAtTime(0.001, now + i * 0.12 + 0.3);
+      o.connect(gg); gg.connect(actx.destination);
+      o.start(now + i * 0.12); o.stop(now + i * 0.12 + 0.3);
+    });
+  } else if (type === 'place') {
+    const o = actx.createOscillator();
+    o.type = 'sine'; o.frequency.setValueAtTime(500, now);
+    o.frequency.exponentialRampToValueAtTime(300, now + 0.05);
+    g.gain.setValueAtTime(0.06, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+    o.connect(g); o.start(now); o.stop(now + 0.06);
+  }
+}
+
+// ── Canvas Setup ──
+const enemyCanvas = document.getElementById('enemyCanvas');
+const enemyCtx = enemyCanvas.getContext('2d');
+const playerCanvas = document.getElementById('playerCanvas');
+const playerCtx = playerCanvas.getContext('2d');
+
+[enemyCanvas, playerCanvas].forEach(c => {
+  c.width = BOARD_PX; c.height = BOARD_PX;
+  c.style.width = BOARD_PX + 'px';
+  c.style.height = BOARD_PX + 'px';
+});
+
+// ── Coordinates ──
+const colLabels = ['A','B','C','D','E','F','G','H','I','J'];
+const rowLabels = ['1','2','3','4','5','6','7','8','9','10'];
+['eCoordTop','pCoordTop'].forEach(id => {
+  const el = document.getElementById(id);
+  colLabels.forEach(c => { const s = document.createElement('span'); s.textContent = c; s.style.width = CELL + 'px'; s.style.textAlign = 'center'; el.appendChild(s); });
+});
+['eCoordLeft','pCoordLeft'].forEach(id => {
+  const el = document.getElementById(id);
+  rowLabels.forEach(r => { const s = document.createElement('span'); s.textContent = r; s.style.height = CELL + 'px'; s.style.lineHeight = CELL + 'px'; el.appendChild(s); });
+});
+
+// ── DOM refs ──
+const btn1P = document.getElementById('btn1P');
+const btnLLM = document.getElementById('btnLLM');
+const diffSection = document.getElementById('diffSection');
+const llmSection = document.getElementById('llmSection');
+const modelSelect = document.getElementById('modelSelect');
+const turnIndicator = document.getElementById('turnIndicator');
+const turnIcon = document.getElementById('turnIcon');
+const turnText = document.getElementById('turnText');
+const statusMsg = document.getElementById('statusMsg');
+const btnNew = document.getElementById('btnNew');
+const btnRotate = document.getElementById('btnRotate');
+const playerFleetEl = document.getElementById('playerFleet');
+const enemyFleetEl = document.getElementById('enemyFleet');
+const chatPanel = document.getElementById('chatPanel');
+const chatSpacer = document.getElementById('chatSpacer');
+const chatMessages = document.getElementById('chatMessages');
+const chatInput = document.getElementById('chatInput');
+const chatSend = document.getElementById('chatSend');
+
+// ── Game State ──
+let gameMode = '1p'; // '1p' or 'llm'
+let difficulty = 2; // 1=easy, 2=medium, 3=hard
+let llmModel = '';
+let chatSessionId = 'bs-session-' + Date.now();
+let chatBusy = false;
+
+// Boards: 10x10, 0=water, 1=ship, 2=hit, 3=miss, 4=sunk
+let playerBoard, enemyBoard;
+// Ship placements: array of { name, size, cells: [{r,c}], sunk }
+let playerShips, enemyShips;
+// Phase: 'placing', 'playing', 'gameover'
+let phase;
+let placingIndex; // which ship we are placing
+let placingHorizontal;
+let playerTurn;
+let hoverCell = { r: -1, c: -1 }; // for placement preview
+let enemyHoverCell = { r: -1, c: -1 }; // for targeting preview
+
+// AI state for hunt/target
+let aiHits = []; // cells AI has hit but not resolved
+let aiTargetQueue = []; // cells to try next
+let aiShotsTaken = new Set();
+
+// Animation effects
+let effects = []; // { type, x, y, frame, maxFrame, canvas }
+
+// ── Utility ──
+function createBoard() {
+  return Array.from({ length: GRID }, () => Array(GRID).fill(WATER));
+}
+
+function canPlace(board, ships, r, c, size, horiz) {
+  for (let i = 0; i < size; i++) {
+    const nr = horiz ? r : r + i;
+    const nc = horiz ? c + i : c;
+    if (nr < 0 || nr >= GRID || nc < 0 || nc >= GRID) return false;
+    if (board[nr][nc] !== WATER) return false;
+  }
+  return true;
+}
+
+function placeShip(board, ships, name, size, r, c, horiz) {
+  const cells = [];
+  for (let i = 0; i < size; i++) {
+    const nr = horiz ? r : r + i;
+    const nc = horiz ? c + i : c;
+    board[nr][nc] = SHIP;
+    cells.push({ r: nr, c: nc });
+  }
+  ships.push({ name, size, cells, sunk: false });
+}
+
+function placeShipsRandomly(board, ships) {
+  for (const ship of SHIPS) {
+    let placed = false;
+    while (!placed) {
+      const horiz = Math.random() < 0.5;
+      const r = Math.floor(Math.random() * GRID);
+      const c = Math.floor(Math.random() * GRID);
+      if (canPlace(board, ships, r, c, ship.size, horiz)) {
+        placeShip(board, ships, ship.name, ship.size, r, c, horiz);
+        placed = true;
+      }
+    }
+  }
+}
+
+function checkSunk(board, ships, r, c) {
+  for (const ship of ships) {
+    if (ship.sunk) continue;
+    const isPartOfShip = ship.cells.some(cell => cell.r === r && cell.c === c);
+    if (!isPartOfShip) continue;
+    const allHit = ship.cells.every(cell => board[cell.r][cell.c] === HIT);
+    if (allHit) {
+      ship.sunk = true;
+      ship.cells.forEach(cell => { board[cell.r][cell.c] = SUNK; });
+      return ship;
+    }
+  }
+  return null;
+}
+
+function allSunk(ships) {
+  return ships.every(s => s.sunk);
+}
+
+// ── Initialize ──
+function initGame() {
+  playerBoard = createBoard();
+  enemyBoard = createBoard();
+  playerShips = [];
+  enemyShips = [];
+  phase = 'placing';
+  placingIndex = 0;
+  placingHorizontal = true;
+  playerTurn = true;
+  hoverCell = { r: -1, c: -1 };
+  enemyHoverCell = { r: -1, c: -1 };
+  effects = [];
+
+  aiHits = [];
+  aiTargetQueue = [];
+  aiShotsTaken = new Set();
+
+  // AI places ships
+  placeShipsRandomly(enemyBoard, enemyShips);
+
+  updateFleetDisplay();
+  updateTurn();
+  setStatus('Click your grid to place: ' + SHIPS[0].name + ' (' + SHIPS[0].size + ')', 'placing');
+  btnRotate.style.display = '';
+
+  drawBoard(enemyCtx, enemyBoard, enemyShips, false, false);
+  drawBoard(playerCtx, playerBoard, playerShips, true, true);
+}
+
+// ── Drawing ──
+function drawBoard(ctx, board, ships, showShips, isPlayerBoard) {
+  const w = BOARD_PX, h = BOARD_PX;
+  // Ocean background
+  ctx.fillStyle = '#0c1a2e';
+  ctx.fillRect(0, 0, w, h);
+
+  // Grid lines
+  ctx.strokeStyle = '#1a3050';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= GRID; i++) {
+    ctx.beginPath();
+    ctx.moveTo(i * CELL, 0); ctx.lineTo(i * CELL, h);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(0, i * CELL); ctx.lineTo(w, i * CELL);
+    ctx.stroke();
+  }
+
+  // Ships (only on player board, or sunk enemy ships)
+  for (const ship of ships) {
+    if (!showShips && !ship.sunk) continue;
+    drawShipShape(ctx, ship);
+  }
+
+  // Hits, misses, sunk markers
+  for (let r = 0; r < GRID; r++) {
+    for (let c = 0; c < GRID; c++) {
+      const val = board[r][c];
+      const cx = c * CELL + CELL / 2;
+      const cy = r * CELL + CELL / 2;
+
+      if (val === MISS) {
+        // Blue dot - water splash
+        ctx.fillStyle = 'rgba(34,102,170,0.6)';
+        ctx.beginPath();
+        ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+        ctx.fill();
+        // Ripple ring
+        ctx.strokeStyle = 'rgba(34,102,170,0.3)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 10, 0, Math.PI * 2);
+        ctx.stroke();
+      } else if (val === HIT) {
+        // Red fire
+        ctx.fillStyle = 'rgba(204,51,51,0.8)';
+        ctx.beginPath();
+        ctx.arc(cx, cy, 8, 0, Math.PI * 2);
+        ctx.fill();
+        // Glow
+        ctx.fillStyle = 'rgba(255,68,68,0.3)';
+        ctx.beginPath();
+        ctx.arc(cx, cy, 12, 0, Math.PI * 2);
+        ctx.fill();
+        // Cross
+        ctx.strokeStyle = '#ff6644';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(cx - 6, cy - 6); ctx.lineTo(cx + 6, cy + 6);
+        ctx.moveTo(cx + 6, cy - 6); ctx.lineTo(cx - 6, cy + 6);
+        ctx.stroke();
+      } else if (val === SUNK) {
+        // Dark hull marker
+        ctx.fillStyle = '#333844';
+        ctx.fillRect(c * CELL + 2, r * CELL + 2, CELL - 4, CELL - 4);
+        // Red X
+        ctx.strokeStyle = '#cc3333';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(cx - 7, cy - 7); ctx.lineTo(cx + 7, cy + 7);
+        ctx.moveTo(cx + 7, cy - 7); ctx.lineTo(cx - 7, cy + 7);
+        ctx.stroke();
+      }
+    }
+  }
+
+  // Placement preview
+  if (isPlayerBoard && phase === 'placing' && hoverCell.r >= 0) {
+    const ship = SHIPS[placingIndex];
+    if (ship) {
+      const valid = canPlace(playerBoard, playerShips, hoverCell.r, hoverCell.c, ship.size, placingHorizontal);
+      for (let i = 0; i < ship.size; i++) {
+        const nr = placingHorizontal ? hoverCell.r : hoverCell.r + i;
+        const nc = placingHorizontal ? hoverCell.c + i : hoverCell.c;
+        if (nr >= 0 && nr < GRID && nc >= 0 && nc < GRID) {
+          ctx.fillStyle = valid ? 'rgba(68,136,204,0.3)' : 'rgba(204,51,51,0.3)';
+          ctx.fillRect(nc * CELL + 1, nr * CELL + 1, CELL - 2, CELL - 2);
+          ctx.strokeStyle = valid ? 'rgba(68,136,204,0.6)' : 'rgba(204,51,51,0.6)';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(nc * CELL + 1, nr * CELL + 1, CELL - 2, CELL - 2);
+        }
+      }
+    }
+  }
+
+  // Enemy targeting hover
+  if (!isPlayerBoard && phase === 'playing' && playerTurn && enemyHoverCell.r >= 0) {
+    const r = enemyHoverCell.r, c = enemyHoverCell.c;
+    if (board[r][c] === WATER || board[r][c] === SHIP) {
+      ctx.fillStyle = 'rgba(68,136,204,0.2)';
+      ctx.fillRect(c * CELL + 1, r * CELL + 1, CELL - 2, CELL - 2);
+      // Crosshair
+      const cx = c * CELL + CELL / 2, cy = r * CELL + CELL / 2;
+      ctx.strokeStyle = 'rgba(68,136,204,0.7)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 12, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(cx - 14, cy); ctx.lineTo(cx + 14, cy);
+      ctx.moveTo(cx, cy - 14); ctx.lineTo(cx, cy + 14);
+      ctx.stroke();
+    }
+  }
+}
+
+function drawShipShape(ctx, ship) {
+  if (ship.cells.length === 0) return;
+  const cells = ship.cells;
+  const minR = Math.min(...cells.map(c => c.r));
+  const minC = Math.min(...cells.map(c => c.c));
+  const maxR = Math.max(...cells.map(c => c.r));
+  const maxC = Math.max(...cells.map(c => c.c));
+  const horiz = minR === maxR;
+
+  const x = minC * CELL + 3;
+  const y = minR * CELL + 3;
+  const w = (maxC - minC + 1) * CELL - 6;
+  const h = (maxR - minR + 1) * CELL - 6;
+
+  // Ship body gradient
+  const grad = horiz
+    ? ctx.createLinearGradient(x, y, x, y + h)
+    : ctx.createLinearGradient(x, y, x + w, y);
+
+  if (ship.sunk) {
+    grad.addColorStop(0, '#2a2e35');
+    grad.addColorStop(0.5, '#333844');
+    grad.addColorStop(1, '#2a2e35');
+  } else {
+    grad.addColorStop(0, '#667788');
+    grad.addColorStop(0.3, '#7a8a9a');
+    grad.addColorStop(0.7, '#5a6a7a');
+    grad.addColorStop(1, '#4a5a6a');
+  }
+
+  ctx.fillStyle = grad;
+  const radius = 4;
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.lineTo(x + w - radius, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + radius);
+  ctx.lineTo(x + w, y + h - radius);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
+  ctx.lineTo(x + radius, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - radius);
+  ctx.lineTo(x, y + radius);
+  ctx.quadraticCurveTo(x, y, x + radius, y);
+  ctx.closePath();
+  ctx.fill();
+
+  // Subtle border
+  ctx.strokeStyle = ship.sunk ? 'rgba(204,51,51,0.3)' : 'rgba(136,170,204,0.3)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+}
+
+function redraw() {
+  drawBoard(enemyCtx, enemyBoard, enemyShips, false, false);
+  drawBoard(playerCtx, playerBoard, playerShips, true, true);
+  drawEffects();
+}
+
+// ── Effects ──
+function addEffect(type, r, c, canvasEl) {
+  effects.push({
+    type, x: c * CELL + CELL / 2, y: r * CELL + CELL / 2,
+    frame: 0, maxFrame: type === 'ripple' ? 30 : 20,
+    canvas: canvasEl
+  });
+  if (!effectsRunning) runEffects();
+}
+
+let effectsRunning = false;
+function runEffects() {
+  effectsRunning = true;
+  function tick() {
+    if (effects.length === 0) { effectsRunning = false; return; }
+    redraw();
+    effects = effects.filter(e => e.frame < e.maxFrame);
+    effects.forEach(e => e.frame++);
+    requestAnimationFrame(tick);
+  }
+  tick();
+}
+
+function drawEffects() {
+  for (const e of effects) {
+    const ctx = e.canvas === enemyCanvas ? enemyCtx : playerCtx;
+    const t = e.frame / e.maxFrame;
+    if (e.type === 'ripple') {
+      // Water ripple on miss
+      ctx.strokeStyle = `rgba(34,102,170,${0.5 * (1 - t)})`;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(e.x, e.y, 6 + t * 16, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(e.x, e.y, 3 + t * 10, 0, Math.PI * 2);
+      ctx.stroke();
+    } else if (e.type === 'explosion') {
+      // Fire burst on hit
+      const r = 4 + t * 18;
+      const alpha = 1 - t;
+      ctx.fillStyle = `rgba(255,${Math.floor(100 * (1 - t))},0,${alpha * 0.6})`;
+      ctx.beginPath();
+      ctx.arc(e.x, e.y, r, 0, Math.PI * 2);
+      ctx.fill();
+      // Sparks
+      for (let i = 0; i < 6; i++) {
+        const angle = (Math.PI * 2 * i) / 6 + t * 2;
+        const dist = t * 20;
+        const sx = e.x + Math.cos(angle) * dist;
+        const sy = e.y + Math.sin(angle) * dist;
+        ctx.fillStyle = `rgba(255,200,50,${alpha * 0.8})`;
+        ctx.beginPath();
+        ctx.arc(sx, sy, 2 * (1 - t), 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+}
+
+// ── UI Updates ──
+function updateTurn() {
+  turnIndicator.className = 'turn-indicator' + (playerTurn ? ' active-player' : ' active-enemy');
+  turnIcon.className = 'turn-icon ' + (playerTurn ? 'player' : 'enemy');
+
+  if (phase === 'placing') {
+    turnText.textContent = 'Place your ships';
+  } else if (phase === 'gameover') {
+    turnText.textContent = 'Game over';
+  } else {
+    turnText.textContent = playerTurn ? 'Your turn — fire!' : 'Enemy firing...';
+  }
+}
+
+function setStatus(text, cls) {
+  statusMsg.textContent = text;
+  statusMsg.className = 'status-msg' + (cls ? ' ' + cls : '');
+}
+
+function updateFleetDisplay() {
+  playerFleetEl.innerHTML = '';
+  enemyFleetEl.innerHTML = '';
+
+  SHIPS.forEach((s, i) => {
+    const pShip = playerShips[i];
+    const pip = document.createElement('span');
+    pip.className = 'ship-pip' + (pShip && pShip.sunk ? ' sunk' : '');
+    pip.textContent = s.name[0] + s.size;
+    playerFleetEl.appendChild(pip);
+  });
+
+  SHIPS.forEach((s, i) => {
+    const eShip = enemyShips[i];
+    const pip = document.createElement('span');
+    pip.className = 'ship-pip' + (eShip && eShip.sunk ? ' sunk' : '');
+    pip.textContent = s.name[0] + s.size;
+    enemyFleetEl.appendChild(pip);
+  });
+}
+
+// ── Placement ──
+playerCanvas.addEventListener('mousemove', (e) => {
+  if (phase !== 'placing') return;
+  const rect = playerCanvas.getBoundingClientRect();
+  const c = Math.floor((e.clientX - rect.left) / CELL);
+  const r = Math.floor((e.clientY - rect.top) / CELL);
+  if (r >= 0 && r < GRID && c >= 0 && c < GRID) {
+    if (hoverCell.r !== r || hoverCell.c !== c) {
+      hoverCell = { r, c };
+      redraw();
+    }
+  }
+});
+
+playerCanvas.addEventListener('mouseleave', () => {
+  hoverCell = { r: -1, c: -1 };
+  redraw();
+});
+
+playerCanvas.addEventListener('click', (e) => {
+  if (phase !== 'placing') return;
+  const rect = playerCanvas.getBoundingClientRect();
+  const c = Math.floor((e.clientX - rect.left) / CELL);
+  const r = Math.floor((e.clientY - rect.top) / CELL);
+  if (r < 0 || r >= GRID || c < 0 || c >= GRID) return;
+
+  const ship = SHIPS[placingIndex];
+  if (!canPlace(playerBoard, playerShips, r, c, ship.size, placingHorizontal)) return;
+
+  placeShip(playerBoard, playerShips, ship.name, ship.size, r, c, placingHorizontal);
+  playSound('place');
+  placingIndex++;
+
+  if (placingIndex >= SHIPS.length) {
+    phase = 'playing';
+    playerTurn = true;
+    btnRotate.style.display = 'none';
+    setStatus('All ships deployed. Fire at enemy waters!', '');
+    updateTurn();
+    updateFleetDisplay();
+    redraw();
+  } else {
+    const next = SHIPS[placingIndex];
+    setStatus('Place: ' + next.name + ' (' + next.size + ')', 'placing');
+    updateFleetDisplay();
+    redraw();
+  }
+});
+
+// Rotate
+function toggleRotation() {
+  if (phase !== 'placing') return;
+  placingHorizontal = !placingHorizontal;
+  redraw();
+}
+
+btnRotate.addEventListener('click', toggleRotation);
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'r' || e.key === 'R') toggleRotation();
+});
+
+// ── Enemy Canvas (Player Shooting) ──
+enemyCanvas.addEventListener('mousemove', (e) => {
+  if (phase !== 'playing' || !playerTurn) return;
+  const rect = enemyCanvas.getBoundingClientRect();
+  const c = Math.floor((e.clientX - rect.left) / CELL);
+  const r = Math.floor((e.clientY - rect.top) / CELL);
+  if (r >= 0 && r < GRID && c >= 0 && c < GRID) {
+    if (enemyHoverCell.r !== r || enemyHoverCell.c !== c) {
+      enemyHoverCell = { r, c };
+      redraw();
+    }
+  }
+});
+
+enemyCanvas.addEventListener('mouseleave', () => {
+  enemyHoverCell = { r: -1, c: -1 };
+  redraw();
+});
+
+enemyCanvas.addEventListener('click', (e) => {
+  if (phase !== 'playing' || !playerTurn) return;
+  const rect = enemyCanvas.getBoundingClientRect();
+  const c = Math.floor((e.clientX - rect.left) / CELL);
+  const r = Math.floor((e.clientY - rect.top) / CELL);
+  if (r < 0 || r >= GRID || c < 0 || c >= GRID) return;
+
+  // Already shot here
+  if (enemyBoard[r][c] === HIT || enemyBoard[r][c] === MISS || enemyBoard[r][c] === SUNK) return;
+
+  playerShoot(r, c);
+});
+
+function playerShoot(r, c) {
+  if (enemyBoard[r][c] === SHIP) {
+    enemyBoard[r][c] = HIT;
+    playSound('explosion');
+    addEffect('explosion', r, c, enemyCanvas);
+    const sunkShip = checkSunk(enemyBoard, enemyShips, r, c);
+    if (sunkShip) {
+      playSound('siren');
+      setStatus('You sunk their ' + sunkShip.name + '!', 'winner');
+      updateFleetDisplay();
+      if (allSunk(enemyShips)) {
+        phase = 'gameover';
+        playSound('win');
+        setStatus('Victory! All enemy ships destroyed!', 'winner');
+        updateTurn();
+        autoTaunt('win');
+        redraw();
+        return;
+      }
+      autoTaunt('player_sunk');
+    } else {
+      setStatus('Hit! Fire again, Commander.', '');
+      autoTaunt('player_hit');
+    }
+  } else {
+    enemyBoard[r][c] = MISS;
+    playSound('splash');
+    addEffect('ripple', r, c, enemyCanvas);
+    setStatus('Miss. Enemy\'s turn.', '');
+  }
+
+  redraw();
+
+  if (enemyBoard[r][c] === MISS) {
+    // Enemy turn
+    playerTurn = false;
+    updateTurn();
+    setTimeout(aiTurn, 600 + Math.random() * 400);
+  }
+  // On hit, player keeps firing (standard battleship variant - actually alternating is more common, let's alternate)
+  // Actually let's use standard rules: turns alternate regardless of hit
+  if (enemyBoard[r][c] !== MISS) {
+    playerTurn = false;
+    updateTurn();
+    setTimeout(aiTurn, 600 + Math.random() * 400);
+  }
+}
+
+// ── AI Turn ──
+function aiTurn() {
+  if (phase !== 'playing') return;
+
+  let r, c;
+  if (difficulty === 1) {
+    [r, c] = aiEasyShot();
+  } else if (difficulty === 2) {
+    [r, c] = aiMediumShot();
+  } else {
+    [r, c] = aiHardShot();
+  }
+
+  const key = r + ',' + c;
+  aiShotsTaken.add(key);
+
+  if (playerBoard[r][c] === SHIP) {
+    playerBoard[r][c] = HIT;
+    playSound('explosion');
+    addEffect('explosion', r, c, playerCanvas);
+
+    if (difficulty >= 2) {
+      aiHits.push({ r, c });
+    }
+
+    const sunkShip = checkSunk(playerBoard, playerShips, r, c);
+    if (sunkShip) {
+      playSound('siren');
+      setStatus('Enemy sunk your ' + sunkShip.name + '!', 'thinking');
+      updateFleetDisplay();
+      // Remove resolved hits from AI tracking
+      if (difficulty >= 2) {
+        aiHits = aiHits.filter(h => {
+          return !sunkShip.cells.some(sc => sc.r === h.r && sc.c === h.c);
+        });
+        // Remove target queue cells belonging to sunk ship's adjacents
+        aiTargetQueue = aiTargetQueue.filter(t => {
+          return !aiShotsTaken.has(t[0] + ',' + t[1]);
+        });
+      }
+      if (allSunk(playerShips)) {
+        phase = 'gameover';
+        setStatus('Defeat. Your fleet has been destroyed.', 'thinking');
+        updateTurn();
+        autoTaunt('lose');
+        redraw();
+        return;
+      }
+      autoTaunt('enemy_sunk');
+    } else {
+      setStatus('Enemy hit your ship!', 'thinking');
+      autoTaunt('enemy_hit');
+    }
+  } else {
+    playerBoard[r][c] = MISS;
+    playSound('splash');
+    addEffect('ripple', r, c, playerCanvas);
+    setStatus('Enemy missed. Your turn!', '');
+  }
+
+  redraw();
+
+  playerTurn = true;
+  updateTurn();
+}
+
+function aiEasyShot() {
+  let r, c;
+  do {
+    r = Math.floor(Math.random() * GRID);
+    c = Math.floor(Math.random() * GRID);
+  } while (aiShotsTaken.has(r + ',' + c));
+  return [r, c];
+}
+
+function aiMediumShot() {
+  // Hunt/Target: if we have hits, search adjacent cells
+  while (aiTargetQueue.length > 0) {
+    const [tr, tc] = aiTargetQueue.shift();
+    const key = tr + ',' + tc;
+    if (!aiShotsTaken.has(key) && tr >= 0 && tr < GRID && tc >= 0 && tc < GRID) {
+      return [tr, tc];
+    }
+  }
+
+  // Add adjacents from any unresolved hits
+  if (aiHits.length > 0) {
+    for (const hit of aiHits) {
+      const dirs = [[0,1],[0,-1],[1,0],[-1,0]];
+      for (const [dr, dc] of dirs) {
+        const nr = hit.r + dr, nc = hit.c + dc;
+        const key = nr + ',' + nc;
+        if (nr >= 0 && nr < GRID && nc >= 0 && nc < GRID && !aiShotsTaken.has(key)) {
+          aiTargetQueue.push([nr, nc]);
+        }
+      }
+    }
+    // Dedupe
+    const seen = new Set();
+    aiTargetQueue = aiTargetQueue.filter(([r,c]) => {
+      const k = r + ',' + c;
+      if (seen.has(k) || aiShotsTaken.has(k)) return false;
+      seen.add(k);
+      return true;
+    });
+    if (aiTargetQueue.length > 0) {
+      const [tr, tc] = aiTargetQueue.shift();
+      return [tr, tc];
+    }
+  }
+
+  // Random hunt - checkerboard pattern for efficiency
+  return aiEasyShot();
+}
+
+function aiHardShot() {
+  // If we have targeted cells, try them first (from previous hits)
+  while (aiTargetQueue.length > 0) {
+    const [tr, tc] = aiTargetQueue.shift();
+    const key = tr + ',' + tc;
+    if (!aiShotsTaken.has(key) && tr >= 0 && tr < GRID && tc >= 0 && tc < GRID) {
+      return [tr, tc];
+    }
+  }
+
+  // Add adjacents from unresolved hits
+  if (aiHits.length > 0) {
+    for (const hit of aiHits) {
+      const dirs = [[0,1],[0,-1],[1,0],[-1,0]];
+      for (const [dr, dc] of dirs) {
+        const nr = hit.r + dr, nc = hit.c + dc;
+        const key = nr + ',' + nc;
+        if (nr >= 0 && nr < GRID && nc >= 0 && nc < GRID && !aiShotsTaken.has(key)) {
+          aiTargetQueue.push([nr, nc]);
+        }
+      }
+    }
+    const seen = new Set();
+    aiTargetQueue = aiTargetQueue.filter(([r,c]) => {
+      const k = r + ',' + c;
+      if (seen.has(k) || aiShotsTaken.has(k)) return false;
+      seen.add(k);
+      return true;
+    });
+    if (aiTargetQueue.length > 0) {
+      const [tr, tc] = aiTargetQueue.shift();
+      return [tr, tc];
+    }
+  }
+
+  // Probability density map
+  const density = Array.from({ length: GRID }, () => Array(GRID).fill(0));
+
+  // Remaining enemy ship sizes (what AI thinks player has)
+  const remainingSizes = playerShips.filter(s => !s.sunk).map(s => s.size);
+
+  for (const size of remainingSizes) {
+    // Horizontal placements
+    for (let r = 0; r < GRID; r++) {
+      for (let c = 0; c <= GRID - size; c++) {
+        let valid = true;
+        for (let i = 0; i < size; i++) {
+          const cell = playerBoard[r][c + i];
+          if (cell === MISS || cell === SUNK) { valid = false; break; }
+          if (aiShotsTaken.has(r + ',' + (c + i)) && cell !== HIT) { valid = false; break; }
+        }
+        if (valid) {
+          for (let i = 0; i < size; i++) {
+            if (!aiShotsTaken.has(r + ',' + (c + i))) {
+              density[r][c + i]++;
+            }
+          }
+        }
+      }
+    }
+    // Vertical placements
+    for (let r = 0; r <= GRID - size; r++) {
+      for (let c = 0; c < GRID; c++) {
+        let valid = true;
+        for (let i = 0; i < size; i++) {
+          const cell = playerBoard[r + i][c];
+          if (cell === MISS || cell === SUNK) { valid = false; break; }
+          if (aiShotsTaken.has((r + i) + ',' + c) && cell !== HIT) { valid = false; break; }
+        }
+        if (valid) {
+          for (let i = 0; i < size; i++) {
+            if (!aiShotsTaken.has((r + i) + ',' + c)) {
+              density[r + i][c]++;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Pick highest density cell
+  let bestR = -1, bestC = -1, bestVal = -1;
+  for (let r = 0; r < GRID; r++) {
+    for (let c = 0; c < GRID; c++) {
+      if (aiShotsTaken.has(r + ',' + c)) continue;
+      if (density[r][c] > bestVal) {
+        bestVal = density[r][c];
+        bestR = r; bestC = c;
+      }
+    }
+  }
+
+  if (bestR >= 0) return [bestR, bestC];
+  // Fallback
+  return aiEasyShot();
+}
+
+// ── Board to string for LLM ──
+function boardToString() {
+  const lines = [];
+  lines.push('ENEMY BOARD (what player sees):');
+  lines.push('  A B C D E F G H I J');
+  for (let r = 0; r < GRID; r++) {
+    let row = (r + 1).toString().padStart(2) + ' ';
+    for (let c = 0; c < GRID; c++) {
+      const v = enemyBoard[r][c];
+      if (v === WATER || v === SHIP) row += '. ';
+      else if (v === MISS) row += 'O ';
+      else if (v === HIT) row += 'X ';
+      else if (v === SUNK) row += '# ';
+    }
+    lines.push(row);
+  }
+  lines.push('');
+  lines.push('PLAYER BOARD:');
+  lines.push('  A B C D E F G H I J');
+  for (let r = 0; r < GRID; r++) {
+    let row = (r + 1).toString().padStart(2) + ' ';
+    for (let c = 0; c < GRID; c++) {
+      const v = playerBoard[r][c];
+      if (v === WATER) row += '. ';
+      else if (v === SHIP) row += 'S ';
+      else if (v === MISS) row += 'O ';
+      else if (v === HIT) row += 'X ';
+      else if (v === SUNK) row += '# ';
+    }
+    lines.push(row);
+  }
+  const pRemain = playerShips.filter(s => !s.sunk).map(s => s.name).join(', ');
+  const eRemain = enemyShips.filter(s => !s.sunk).map(s => s.name).join(', ');
+  lines.push('Player remaining: ' + (pRemain || 'none'));
+  lines.push('Enemy remaining: ' + (eRemain || 'none'));
+  return lines.join('\n');
+}
+
+function getGameStatus() {
+  if (phase === 'placing') return 'Player is placing ships.';
+  if (phase === 'gameover') {
+    if (allSunk(enemyShips)) return 'Player won! All enemy ships sunk.';
+    return 'Enemy won! All player ships sunk.';
+  }
+  const pLeft = playerShips.filter(s => !s.sunk).length;
+  const eLeft = enemyShips.filter(s => !s.sunk).length;
+  return (playerTurn ? 'Player\'s turn.' : 'Enemy\'s turn.') + ' Player ships: ' + pLeft + ', Enemy ships: ' + eLeft;
+}
+
+// ── Mode / Difficulty ──
+function setMode(m) {
+  gameMode = m;
+  btn1P.className = 'mode-btn' + (m === '1p' ? ' active' : '');
+  btnLLM.className = 'mode-btn' + (m === 'llm' ? ' active' : '');
+
+  diffSection.className = 'diff-section' + (m !== 'llm' ? ' visible' : '');
+  llmSection.className = 'diff-section' + (m === 'llm' ? ' visible' : '');
+
+  showChat(m === 'llm');
+
+  if (m === 'llm') difficulty = 2;
+  initGame();
+}
+
+btn1P.addEventListener('click', () => setMode('1p'));
+btnLLM.addEventListener('click', () => setMode('llm'));
+
+document.querySelectorAll('.diff-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    difficulty = parseInt(btn.dataset.diff);
+    document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    initGame();
+  });
+});
+
+btnNew.addEventListener('click', () => initGame());
+
+// ── LLM Models ──
+async function loadModels() {
+  try {
+    const res = await fetch('/api/models');
+    const data = await res.json();
+    const models = data.models || data;
+    modelSelect.innerHTML = '';
+    if (Array.isArray(models)) {
+      models.forEach(m => {
+        const name = m.name || m.id || m;
+        const opt = document.createElement('option');
+        opt.value = name; opt.textContent = name;
+        modelSelect.appendChild(opt);
+      });
+      if (models.length > 0) llmModel = models[0].name || models[0].id || models[0];
+    }
+  } catch (e) {
+    modelSelect.innerHTML = '<option>No models available</option>';
+  }
+}
+loadModels();
+
+modelSelect.addEventListener('change', () => {
+  llmModel = modelSelect.value;
+});
+
+// ── Chat ──
+function showChat(show) {
+  chatPanel.className = 'chat-panel' + (show ? ' visible' : '');
+  chatSpacer.style.display = show ? '' : 'none';
+}
+showChat(false);
+
+function addChatBubble(text, cls) {
+  const div = document.createElement('div');
+  div.className = 'chat-bubble ' + cls;
+  if (cls === 'llm-typing') {
+    div.innerHTML = '<span class="thinking-dots"><span>.</span><span>.</span><span>.</span></span>';
+  } else {
+    div.textContent = text;
+  }
+  chatMessages.appendChild(div);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+  return div;
+}
+
+async function sendChat() {
+  const text = chatInput.value.trim();
+  if (!text || chatBusy) return;
+  chatInput.value = '';
+  addChatBubble(text, 'user');
+  chatBusy = true;
+  const typingBubble = addChatBubble('...', 'llm-typing');
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: text,
+        model: llmModel || 'qwen2.5-coder:14b',
+        board: boardToString(),
+        sessionId: chatSessionId,
+        gameStatus: getGameStatus(),
+        gameName: 'battleship'
+      })
+    });
+    const data = await res.json();
+    typingBubble.remove();
+    addChatBubble(data.reply || '...', 'llm');
+  } catch (e) {
+    typingBubble.remove();
+    addChatBubble('*transmission lost*', 'system');
+  }
+  chatBusy = false;
+}
+
+chatSend.addEventListener('click', sendChat);
+chatInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') sendChat();
+});
+
+// Auto-taunt
+let moveCount = 0;
+async function autoTaunt(event) {
+  if (gameMode !== 'llm' || chatBusy) return;
+  moveCount++;
+
+  const shouldTaunt = moveCount === 1 || event === 'win' || event === 'lose' ||
+    event === 'player_sunk' || event === 'enemy_sunk' ||
+    event === 'player_hit' || event === 'enemy_hit' ||
+    Math.random() < 0.3;
+  if (!shouldTaunt) return;
+
+  chatBusy = true;
+  const typingBubble = addChatBubble('...', 'llm-typing');
+
+  let prompts;
+  if (event === 'win') {
+    prompts = ['*the player just won the game, sinking all your ships* Be dramatically defeated. Demand a rematch.'];
+  } else if (event === 'lose') {
+    prompts = ['*you just won the game, sinking all enemy ships* Gloat mercilessly about your naval supremacy.'];
+  } else if (event === 'player_sunk') {
+    prompts = [
+      '*the player just sunk one of your ships* React with anger and threaten revenge.',
+      '*you just lost a ship* Be outraged and promise to retaliate.'
+    ];
+  } else if (event === 'enemy_sunk') {
+    prompts = [
+      '*you just sunk one of the player\'s ships* Celebrate and mock them for losing a ship.',
+      '*you sunk an enemy vessel* Gloat about your superior naval tactics.'
+    ];
+  } else if (event === 'player_hit') {
+    prompts = [
+      '*the player just hit one of your ships* React to getting hit. Be annoyed.',
+      '*you took a hit* Downplay the damage and trash talk back.'
+    ];
+  } else if (event === 'enemy_hit') {
+    prompts = [
+      '*you just hit the player\'s ship* Celebrate the direct hit!',
+      '*your torpedo found its mark* Taunt the player about their sinking fleet.'
+    ];
+  } else {
+    prompts = [
+      '*a shot was fired* Comment on the state of the battle.',
+      '*the battle rages on* Say something about naval warfare.',
+    ];
+  }
+  const tauntPrompt = prompts[Math.floor(Math.random() * prompts.length)];
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: tauntPrompt,
+        model: llmModel || 'qwen2.5-coder:14b',
+        board: boardToString(),
+        sessionId: chatSessionId,
+        gameStatus: getGameStatus(),
+        gameName: 'battleship'
+      })
+    });
+    const data = await res.json();
+    typingBubble.remove();
+    addChatBubble(data.reply || '...', 'llm');
+  } catch (e) {
+    typingBubble.remove();
+  }
+  chatBusy = false;
+}
+
+// Override initGame for chat reset
+const _origInit = initGame;
+const wrappedInit = function() {
+  _origInit.call(this);
+  moveCount = 0;
+  chatSessionId = 'bs-session-' + Date.now();
+  chatMessages.innerHTML = '<div class="chat-bubble system">Hail the enemy commander. They will respond.</div>';
+  fetch('/api/chat/clear', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sessionId: chatSessionId })
+  }).catch(() => {});
+};
+// Redefine initGame
+initGame = wrappedInit;
+
+// ── Start ──
+initGame();
+</script>
+
+</body>
+</html>

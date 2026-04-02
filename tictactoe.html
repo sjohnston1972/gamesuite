@@ -1,0 +1,1347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tic Tac Toe</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@400;500;600&display=swap');
+
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+
+  :root {
+    --bg: #1a1e1a;
+    --surface: #222822;
+    --surface-2: #2a302a;
+    --border: #3a4a3a;
+    --accent: #7aa87a;
+    --accent-dim: #5a7a5a;
+    --cream: #e0e8d8;
+    --cream-dim: #98a890;
+    --chalk: #d8e0d0;
+    --board-bg: #2a3a2a;
+  }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: var(--bg);
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    overflow: hidden;
+  }
+
+  body {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: max(20px, calc(50vh - 280px));
+    background:
+      radial-gradient(ellipse at 30% 20%, rgba(80,120,80,0.06) 0%, transparent 60%),
+      radial-gradient(ellipse at 70% 80%, rgba(60,100,60,0.05) 0%, transparent 60%),
+      var(--bg);
+  }
+
+  .game-container {
+    display: flex;
+    gap: 30px;
+    align-items: flex-start;
+    user-select: none;
+  }
+
+  .board-frame {
+    position: relative;
+    flex-shrink: 0;
+    padding: 18px;
+    background: linear-gradient(145deg, #3a4a3a, #1e2e1e, #2a3a2a);
+    border-radius: 8px;
+    box-shadow:
+      0 2px 4px rgba(0,0,0,0.4),
+      0 8px 24px rgba(0,0,0,0.5),
+      0 20px 60px rgba(0,0,0,0.4),
+      inset 0 1px 0 rgba(255,255,255,0.06);
+  }
+
+  .board-frame::before {
+    content: '';
+    position: absolute;
+    inset: 4px;
+    border: 1px solid rgba(122,168,122,0.15);
+    border-radius: 6px;
+    pointer-events: none;
+  }
+
+  canvas {
+    display: block;
+    border-radius: 3px;
+    cursor: pointer;
+  }
+
+  .sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 220px;
+    flex-shrink: 0;
+  }
+
+  .back-link {
+    font-size: 12px;
+    color: var(--cream-dim);
+    text-decoration: none;
+    letter-spacing: 1px;
+    transition: color 0.2s;
+  }
+  .back-link:hover { color: var(--accent); }
+
+  .game-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    line-height: 1;
+  }
+  .game-title span {
+    display: block;
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--cream-dim);
+    letter-spacing: 6px;
+    margin-top: 4px;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  /* Mode Selector */
+  .mode-panel {
+    padding: 14px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .mode-panel h3 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent-dim);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 10px;
+  }
+  .mode-toggle {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+  .mode-btn {
+    flex: 1;
+    padding: 8px 6px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--cream-dim);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+  }
+  .mode-btn:hover {
+    border-color: var(--accent-dim);
+    color: var(--cream);
+  }
+  .mode-btn.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(122,168,122,0.08);
+  }
+  .diff-section {
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    transition: max-height 0.3s ease, opacity 0.25s ease, margin-top 0.3s ease;
+    margin-top: 0;
+  }
+  .diff-section.visible {
+    max-height: 120px;
+    opacity: 1;
+    margin-top: 10px;
+  }
+  .diff-label {
+    font-size: 11px;
+    color: var(--cream-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+  }
+  .diff-btns {
+    display: flex;
+    gap: 6px;
+  }
+  .diff-btn {
+    flex: 1;
+    padding: 7px 4px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--cream-dim);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+  }
+  .diff-btn:hover {
+    border-color: var(--accent-dim);
+    color: var(--cream);
+  }
+  .diff-btn.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(122,168,122,0.08);
+  }
+
+  .model-select {
+    width: 100%;
+    padding: 7px 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    cursor: pointer;
+    outline: none;
+  }
+  .model-select:focus {
+    border-color: var(--accent-dim);
+  }
+
+  .turn-indicator {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    transition: border-color 0.3s;
+  }
+  .turn-indicator.active-x { border-color: var(--chalk); }
+  .turn-indicator.active-o { border-color: var(--accent); }
+
+  .turn-symbol {
+    width: 28px; height: 28px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 22px;
+    font-weight: 700;
+  }
+  .turn-symbol.sym-x { color: var(--chalk); }
+  .turn-symbol.sym-o { color: var(--accent); }
+
+  .turn-text {
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .turn-label {
+    font-size: 11px;
+    color: var(--cream-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .score-panel {
+    padding: 16px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .score-panel h3 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent-dim);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+  }
+  .score-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+  }
+  .score-row + .score-row { border-top: 1px solid var(--border); }
+  .score-label { font-size: 13px; color: var(--cream-dim); }
+  .score-value { font-family: 'Cormorant Garamond', serif; font-size: 20px; font-weight: 700; }
+  .score-value.x-val { color: var(--chalk); }
+  .score-value.o-val { color: var(--accent); }
+  .score-value.draw-val { color: var(--cream-dim); }
+
+  .status-msg {
+    padding: 14px 18px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--cream-dim);
+    line-height: 1.5;
+    height: 67px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    transition: all 0.3s;
+  }
+  .status-msg.winner {
+    border-color: var(--accent);
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .status-msg.thinking {
+    border-color: var(--accent-dim);
+    color: var(--cream-dim);
+  }
+
+  .btn-new {
+    padding: 12px 20px;
+    background: transparent;
+    border: 1px solid var(--accent-dim);
+    border-radius: 6px;
+    color: var(--accent);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-new:hover {
+    background: rgba(122,168,122,0.1);
+    border-color: var(--accent);
+  }
+
+  /* Thinking dots animation */
+  @keyframes dotPulse {
+    0%, 80%, 100% { opacity: 0.2; }
+    40% { opacity: 1; }
+  }
+  .thinking-dots span {
+    animation: dotPulse 1.4s infinite;
+    font-size: 18px;
+    letter-spacing: 2px;
+  }
+  .thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+  /* Chat Panel */
+  .chat-spacer {
+    width: 220px;
+    flex-shrink: 0;
+  }
+  .chat-panel {
+    display: none;
+    flex-direction: column;
+    width: 340px;
+    flex-shrink: 0;
+    height: 540px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .chat-panel.visible { display: flex; }
+
+  .chat-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent-dim);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    flex-shrink: 0;
+  }
+
+  .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .chat-bubble {
+    max-width: 85%;
+    padding: 8px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    line-height: 1.45;
+    word-wrap: break-word;
+    animation: fadeIn 0.2s ease;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .chat-bubble.user {
+    align-self: flex-end;
+    background: rgba(122,168,122,0.15);
+    color: var(--cream);
+    border-bottom-right-radius: 4px;
+  }
+  .chat-bubble.llm {
+    align-self: flex-start;
+    background: rgba(180,200,180,0.12);
+    color: var(--cream);
+    border-bottom-left-radius: 4px;
+  }
+  .chat-bubble.system {
+    align-self: center;
+    background: transparent;
+    color: var(--cream-dim);
+    font-size: 11px;
+    font-style: italic;
+    padding: 4px 8px;
+  }
+  .chat-bubble.llm-typing {
+    align-self: flex-start;
+    background: rgba(180,200,180,0.08);
+    color: var(--cream-dim);
+    border-bottom-left-radius: 4px;
+  }
+
+  .chat-input-row {
+    display: flex;
+    gap: 6px;
+    padding: 10px 12px;
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .chat-input {
+    flex: 1;
+    padding: 8px 10px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .chat-input:focus { border-color: var(--accent-dim); }
+  .chat-input::placeholder { color: var(--cream-dim); opacity: 0.5; }
+
+  .chat-send {
+    padding: 8px 14px;
+    background: rgba(122,168,122,0.2);
+    border: 1px solid rgba(122,168,122,0.3);
+    border-radius: 6px;
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .chat-send:hover {
+    background: rgba(122,168,122,0.3);
+    border-color: var(--accent);
+  }
+
+  @media (max-width: 1000px) {
+    .game-container { flex-direction: column; gap: 20px; }
+    .sidebar { flex-direction: row; flex-wrap: wrap; min-width: unset; width: auto !important; }
+    .sidebar > * { flex: 1; min-width: 140px; }
+    .chat-panel { width: 100%; height: 300px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="game-container">
+  <div class="sidebar">
+    <div>
+      <a href="index.html" class="back-link">&larr; Back</a>
+      <div class="game-title" style="margin-top:8px">Tic Tac Toe<span>Classic Board Game</span></div>
+    </div>
+
+    <div class="mode-panel">
+      <h3>Game Mode</h3>
+      <div class="mode-toggle">
+        <button class="mode-btn active" data-mode="1p" id="btn1P">1 Player</button>
+        <button class="mode-btn" data-mode="llm" id="btnLLM">vs LLM</button>
+        <button class="mode-btn" data-mode="2p" id="btn2P">2 Player</button>
+      </div>
+      <div class="diff-section visible" id="diffSection">
+        <div class="diff-label">Difficulty</div>
+        <div class="diff-btns">
+          <button class="diff-btn" data-diff="1" id="diffEasy">Easy</button>
+          <button class="diff-btn active" data-diff="2" id="diffMedium">Medium</button>
+          <button class="diff-btn" data-diff="3" id="diffHard">Hard</button>
+        </div>
+      </div>
+      <div class="diff-section" id="llmSection">
+        <div class="diff-label">Ollama Model</div>
+        <select id="modelSelect" class="model-select">
+          <option>Loading models...</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="turn-indicator" id="turnIndicator">
+      <div class="turn-symbol sym-x" id="turnSymbol">X</div>
+      <div>
+        <div class="turn-label">Current Turn</div>
+        <div class="turn-text" id="turnText">X moves</div>
+      </div>
+    </div>
+
+    <div class="score-panel">
+      <h3>Score</h3>
+      <div class="score-row">
+        <span class="score-label">X Wins <small style="opacity:0.5" id="youLabel">(you)</small></span>
+        <span class="score-value x-val" id="scoreX">0</span>
+      </div>
+      <div class="score-row">
+        <span class="score-label">O Wins <small style="opacity:0.5" id="cpuLabel">(cpu)</small></span>
+        <span class="score-value o-val" id="scoreO">0</span>
+      </div>
+      <div class="score-row">
+        <span class="score-label">Draws</span>
+        <span class="score-value draw-val" id="scoreD">0</span>
+      </div>
+    </div>
+
+    <div class="status-msg" id="statusMsg">Click a cell to begin.</div>
+
+    <button class="btn-new" id="btnNew">New Game</button>
+  </div>
+
+  <div class="board-frame">
+    <canvas id="board"></canvas>
+  </div>
+
+  <div class="chat-panel" id="chatPanel">
+    <div class="chat-header">Trash Talk</div>
+    <div class="chat-messages" id="chatMessages">
+      <div class="chat-bubble system">Chat with the LLM opponent. It bites back.</div>
+    </div>
+    <div class="chat-input-row">
+      <input type="text" class="chat-input" id="chatInput" placeholder="Talk trash..." maxlength="200" autocomplete="off">
+      <button class="chat-send" id="chatSend">Send</button>
+    </div>
+  </div>
+  <div class="chat-spacer" id="chatSpacer"></div>
+</div>
+
+<script>
+// ── Constants ──
+const EMPTY = 0, X = 1, O = 2;
+const BOARD_PX = 400;
+const CELL = BOARD_PX / 3;
+
+// ── Audio ──
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx;
+function ensureAudio() { if (!audioCtx) audioCtx = new AudioCtx(); }
+
+function playSound(type) {
+  ensureAudio();
+  const actx = audioCtx;
+  const now = actx.currentTime;
+
+  if (type === 'move') {
+    // Chalk scratch sound
+    const bufferSize = actx.sampleRate * 0.08;
+    const buffer = actx.createBuffer(1, bufferSize, actx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      const t = i / actx.sampleRate;
+      data[i] = (Math.random() * 2 - 1) * Math.exp(-t * 40) * 0.15;
+    }
+    const src = actx.createBufferSource();
+    src.buffer = buffer;
+    const hp = actx.createBiquadFilter();
+    hp.type = 'highpass'; hp.frequency.value = 2000;
+    const lp = actx.createBiquadFilter();
+    lp.type = 'lowpass'; lp.frequency.value = 6000;
+    src.connect(hp); hp.connect(lp); lp.connect(actx.destination);
+    src.start(now);
+  } else if (type === 'win') {
+    [523, 659, 784, 1047].forEach((f, i) => {
+      const o = actx.createOscillator();
+      const g = actx.createGain();
+      o.type = 'sine'; o.frequency.value = f;
+      g.gain.setValueAtTime(0, now + i * 0.12);
+      g.gain.linearRampToValueAtTime(0.08, now + i * 0.12 + 0.03);
+      g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.12 + 0.3);
+      o.connect(g); g.connect(actx.destination);
+      o.start(now + i * 0.12); o.stop(now + i * 0.12 + 0.3);
+    });
+  } else if (type === 'draw') {
+    const o = actx.createOscillator();
+    const g = actx.createGain();
+    o.type = 'triangle'; o.frequency.setValueAtTime(300, now);
+    o.frequency.exponentialRampToValueAtTime(150, now + 0.3);
+    g.gain.setValueAtTime(0.06, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+    o.connect(g); g.connect(actx.destination);
+    o.start(now); o.stop(now + 0.3);
+  }
+}
+
+// ── Canvas Setup ──
+const canvas = document.getElementById('board');
+const ctx = canvas.getContext('2d');
+canvas.width = BOARD_PX;
+canvas.height = BOARD_PX;
+canvas.style.width = BOARD_PX + 'px';
+canvas.style.height = BOARD_PX + 'px';
+
+// ── Game State ──
+let board, turn, gameOver, winLine;
+let scoreX = 0, scoreO = 0, scoreD = 0;
+let aiThinking = false;
+let hoverCell = null;
+
+// ── Mode & Difficulty ──
+let gameMode = '1p';
+let difficulty = 2;
+let llmModel = '';
+const AI_PIECE = O;
+const HUMAN_PIECE = X;
+
+// ── Chalk Dust Particles ──
+const dustParticles = [];
+for (let i = 0; i < 40; i++) {
+  dustParticles.push({
+    x: Math.random() * BOARD_PX,
+    y: Math.random() * BOARD_PX,
+    r: Math.random() * 1.5 + 0.3,
+    vx: (Math.random() - 0.5) * 0.15,
+    vy: (Math.random() - 0.5) * 0.1 - 0.05,
+    alpha: Math.random() * 0.15 + 0.03,
+  });
+}
+
+// ── Chalk Line Randomization Seeds (per game) ──
+let chalkSeeds = [];
+function generateChalkSeeds() {
+  chalkSeeds = [];
+  // 4 grid lines (2 vertical, 2 horizontal), each with random offsets
+  for (let i = 0; i < 4; i++) {
+    const pts = [];
+    for (let j = 0; j < 8; j++) {
+      pts.push({ dx: (Math.random() - 0.5) * 3, dy: (Math.random() - 0.5) * 3 });
+    }
+    chalkSeeds.push(pts);
+  }
+  // Seeds for X and O drawing per cell
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 3; c++) {
+      chalkSeeds.push({
+        xOff1: (Math.random() - 0.5) * 6, yOff1: (Math.random() - 0.5) * 6,
+        xOff2: (Math.random() - 0.5) * 6, yOff2: (Math.random() - 0.5) * 6,
+        rot: (Math.random() - 0.5) * 0.08,
+      });
+    }
+  }
+}
+
+// ── Mode UI ──
+document.getElementById('btn1P').addEventListener('click', () => setMode('1p'));
+document.getElementById('btn2P').addEventListener('click', () => setMode('2p'));
+document.getElementById('btnLLM').addEventListener('click', () => setMode('llm'));
+document.getElementById('diffEasy').addEventListener('click', () => setDifficulty(1));
+document.getElementById('diffMedium').addEventListener('click', () => setDifficulty(2));
+document.getElementById('diffHard').addEventListener('click', () => setDifficulty(3));
+
+function setMode(m) {
+  gameMode = m;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === m));
+  document.getElementById('diffSection').classList.toggle('visible', m === '1p' || m === 'llm');
+  document.getElementById('llmSection').classList.toggle('visible', m === 'llm');
+  const isSingle = m === '1p' || m === 'llm';
+  document.getElementById('youLabel').style.display = isSingle ? '' : 'none';
+  const cpuLabel = document.getElementById('cpuLabel');
+  cpuLabel.style.display = isSingle ? '' : 'none';
+  cpuLabel.textContent = m === 'llm' ? '(llm)' : '(cpu)';
+  if (m === 'llm') loadModels();
+  showChat(m === 'llm');
+  initGame();
+}
+
+function setDifficulty(d) {
+  difficulty = d;
+  document.querySelectorAll('.diff-btn').forEach(b => b.classList.toggle('active', +b.dataset.diff === d));
+  initGame();
+}
+
+// ── Ollama Model Loading ──
+async function loadModels() {
+  const sel = document.getElementById('modelSelect');
+  try {
+    const res = await fetch('/api/models');
+    const data = await res.json();
+    if (data.models && data.models.length > 0) {
+      sel.innerHTML = '';
+      data.models.forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        sel.appendChild(opt);
+      });
+      const preferred = data.models.find(m => m.includes('coder:14b')) || data.models[0];
+      sel.value = preferred;
+      llmModel = preferred;
+    }
+  } catch (e) {
+    sel.innerHTML = '<option>Connection error</option>';
+  }
+}
+document.getElementById('modelSelect').addEventListener('change', (e) => {
+  llmModel = e.target.value;
+});
+
+// ── Init ──
+function initGame() {
+  board = [[EMPTY, EMPTY, EMPTY],
+           [EMPTY, EMPTY, EMPTY],
+           [EMPTY, EMPTY, EMPTY]];
+  turn = X;
+  gameOver = false;
+  winLine = null;
+  aiThinking = false;
+  generateChalkSeeds();
+  updateUI();
+  draw();
+}
+
+// ── Win Check ──
+function checkWin(b) {
+  const lines = [
+    [[0,0],[0,1],[0,2]], [[1,0],[1,1],[1,2]], [[2,0],[2,1],[2,2]], // rows
+    [[0,0],[1,0],[2,0]], [[0,1],[1,1],[2,1]], [[0,2],[1,2],[2,2]], // cols
+    [[0,0],[1,1],[2,2]], [[0,2],[1,1],[2,0]], // diags
+  ];
+  for (const line of lines) {
+    const [a, b2, c] = line;
+    if (b[a[0]][a[1]] !== EMPTY && b[a[0]][a[1]] === b[b2[0]][b2[1]] && b[b2[0]][b2[1]] === b[c[0]][c[1]]) {
+      return { winner: b[a[0]][a[1]], line };
+    }
+  }
+  // Check draw
+  let full = true;
+  for (let r = 0; r < 3; r++)
+    for (let c = 0; c < 3; c++)
+      if (b[r][c] === EMPTY) full = false;
+  if (full) return { winner: 0, line: null }; // draw
+  return null; // game continues
+}
+
+function getEmpty(b) {
+  const cells = [];
+  for (let r = 0; r < 3; r++)
+    for (let c = 0; c < 3; c++)
+      if (b[r][c] === EMPTY) cells.push([r, c]);
+  return cells;
+}
+
+// ── Minimax AI ──
+function minimax(b, isMaximizing, depth, maxDepth) {
+  const result = checkWin(b);
+  if (result) {
+    if (result.winner === AI_PIECE) return 10 - depth;
+    if (result.winner === HUMAN_PIECE) return depth - 10;
+    return 0; // draw
+  }
+
+  if (maxDepth !== null && depth >= maxDepth) return 0;
+
+  const empty = getEmpty(b);
+  if (empty.length === 0) return 0;
+
+  if (isMaximizing) {
+    let best = -Infinity;
+    for (const [r, c] of empty) {
+      b[r][c] = AI_PIECE;
+      best = Math.max(best, minimax(b, false, depth + 1, maxDepth));
+      b[r][c] = EMPTY;
+    }
+    return best;
+  } else {
+    let best = Infinity;
+    for (const [r, c] of empty) {
+      b[r][c] = HUMAN_PIECE;
+      best = Math.min(best, minimax(b, true, depth + 1, maxDepth));
+      b[r][c] = EMPTY;
+    }
+    return best;
+  }
+}
+
+function getAiMove() {
+  const empty = getEmpty(board);
+  if (empty.length === 0) return null;
+
+  // Easy: pure random
+  if (difficulty === 1) {
+    return empty[Math.floor(Math.random() * empty.length)];
+  }
+
+  // Medium: minimax depth 3 with 20% random chance
+  if (difficulty === 2 && Math.random() < 0.2) {
+    return empty[Math.floor(Math.random() * empty.length)];
+  }
+
+  const maxDepth = difficulty === 2 ? 3 : null; // null = full search for hard
+  let bestScore = -Infinity;
+  let bestMoves = [];
+  for (const [r, c] of empty) {
+    board[r][c] = AI_PIECE;
+    const score = minimax(board, false, 0, maxDepth);
+    board[r][c] = EMPTY;
+    if (score > bestScore) {
+      bestScore = score;
+      bestMoves = [[r, c]];
+    } else if (score === bestScore) {
+      bestMoves.push([r, c]);
+    }
+  }
+  return bestMoves[Math.floor(Math.random() * bestMoves.length)];
+}
+
+function isAiTurn() {
+  return (gameMode === '1p' || gameMode === 'llm') && turn === AI_PIECE && !gameOver;
+}
+
+// ── Make Move ──
+function makeMove(r, c) {
+  if (board[r][c] !== EMPTY || gameOver) return;
+  board[r][c] = turn;
+  playSound('move');
+
+  // Generate chalk seed for this cell
+  const idx = 4 + r * 3 + c;
+  if (!chalkSeeds[idx]) {
+    chalkSeeds[idx] = {
+      xOff1: (Math.random() - 0.5) * 6, yOff1: (Math.random() - 0.5) * 6,
+      xOff2: (Math.random() - 0.5) * 6, yOff2: (Math.random() - 0.5) * 6,
+      rot: (Math.random() - 0.5) * 0.08,
+    };
+  }
+
+  const result = checkWin(board);
+  if (result) {
+    gameOver = true;
+    if (result.winner === X) {
+      scoreX++;
+      winLine = result.line;
+      playSound('win');
+    } else if (result.winner === O) {
+      scoreO++;
+      winLine = result.line;
+      playSound('win');
+    } else {
+      scoreD++;
+      playSound('draw');
+    }
+  } else {
+    turn = turn === X ? O : X;
+  }
+
+  updateUI();
+  draw();
+
+  if (!gameOver && isAiTurn()) {
+    scheduleAiMove();
+  }
+  if (gameMode === 'llm' && turn === X && !gameOver && board.flat().filter(c => c !== EMPTY).length > 1) {
+    autoTaunt();
+  }
+  if (gameMode === 'llm' && gameOver) {
+    autoTaunt();
+  }
+}
+
+function scheduleAiMove() {
+  if (!isAiTurn() || aiThinking || gameOver) return;
+  aiThinking = true;
+  updateUI();
+  setTimeout(() => {
+    const move = getAiMove();
+    aiThinking = false;
+    if (move) {
+      makeMove(move[0], move[1]);
+    }
+  }, 350);
+}
+
+// ── UI Update ──
+function updateUI() {
+  const turnSymbol = document.getElementById('turnSymbol');
+  const turnText = document.getElementById('turnText');
+  const indicator = document.getElementById('turnIndicator');
+  const statusMsg = document.getElementById('statusMsg');
+
+  turnSymbol.textContent = turn === X ? 'X' : 'O';
+  turnSymbol.className = 'turn-symbol ' + (turn === X ? 'sym-x' : 'sym-o');
+  indicator.className = 'turn-indicator ' + (turn === X ? 'active-x' : 'active-o');
+
+  if (aiThinking) {
+    turnText.innerHTML = 'AI thinking<span class="thinking-dots"><span>.</span><span>.</span><span>.</span></span>';
+    statusMsg.className = 'status-msg thinking';
+    statusMsg.innerHTML = 'AI is thinking<span class="thinking-dots"><span>.</span><span>.</span><span>.</span></span>';
+  } else if (gameOver) {
+    const result = checkWin(board);
+    if (result && result.winner === X) {
+      turnText.textContent = 'X wins!';
+      statusMsg.className = 'status-msg winner';
+      statusMsg.textContent = 'X wins the game!';
+    } else if (result && result.winner === O) {
+      turnText.textContent = 'O wins!';
+      statusMsg.className = 'status-msg winner';
+      statusMsg.textContent = 'O wins the game!';
+    } else {
+      turnText.textContent = 'Draw!';
+      statusMsg.className = 'status-msg';
+      statusMsg.textContent = "It's a draw!";
+    }
+  } else {
+    const isSingle = gameMode === '1p' || gameMode === 'llm';
+    if (turn === X) {
+      turnText.textContent = isSingle ? 'Your turn (X)' : 'X moves';
+    } else {
+      turnText.textContent = isSingle ? 'AI turn (O)' : 'O moves';
+    }
+    statusMsg.className = 'status-msg';
+    statusMsg.textContent = turn === X ? (isSingle ? 'Your move. Click an empty cell.' : "X's turn. Click an empty cell.") : (isSingle ? 'AI is about to move...' : "O's turn. Click an empty cell.");
+  }
+
+  document.getElementById('scoreX').textContent = scoreX;
+  document.getElementById('scoreO').textContent = scoreO;
+  document.getElementById('scoreD').textContent = scoreD;
+}
+
+// ── Drawing ──
+function drawChalkLine(x1, y1, x2, y2, seeds, color, width) {
+  ctx.save();
+  ctx.strokeStyle = color || 'rgba(220,225,215,0.7)';
+  ctx.lineWidth = width || 2.5;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  const steps = seeds ? seeds.length : 6;
+  ctx.moveTo(x1 + (seeds ? seeds[0].dx : 0), y1 + (seeds ? seeds[0].dy : 0));
+  for (let i = 1; i < steps; i++) {
+    const t = i / (steps - 1);
+    const x = x1 + (x2 - x1) * t + (seeds ? seeds[i].dx : (Math.random() - 0.5) * 2);
+    const y = y1 + (y2 - y1) * t + (seeds ? seeds[i].dy : (Math.random() - 0.5) * 2);
+    ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  // Chalk dust along line
+  ctx.globalAlpha = 0.08;
+  ctx.lineWidth = width ? width + 4 : 6;
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawX(cx, cy, size, seed) {
+  const half = size * 0.35;
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(seed.rot);
+  ctx.strokeStyle = 'rgba(220,225,215,0.85)';
+  ctx.lineWidth = 3.5;
+  ctx.lineCap = 'round';
+
+  // First stroke of X
+  ctx.beginPath();
+  ctx.moveTo(-half + seed.xOff1 * 0.3, -half + seed.yOff1 * 0.3);
+  ctx.lineTo(half + seed.xOff2 * 0.3, half + seed.yOff2 * 0.3);
+  ctx.stroke();
+  // Chalk dust
+  ctx.globalAlpha = 0.06;
+  ctx.lineWidth = 7;
+  ctx.stroke();
+
+  // Second stroke of X
+  ctx.globalAlpha = 1;
+  ctx.lineWidth = 3.5;
+  ctx.beginPath();
+  ctx.moveTo(half + seed.yOff1 * 0.3, -half + seed.xOff2 * 0.3);
+  ctx.lineTo(-half + seed.yOff2 * 0.3, half + seed.xOff1 * 0.3);
+  ctx.stroke();
+  ctx.globalAlpha = 0.06;
+  ctx.lineWidth = 7;
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+function drawO(cx, cy, size, seed) {
+  const radius = size * 0.32;
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(seed.rot);
+  ctx.strokeStyle = 'rgba(220,225,215,0.85)';
+  ctx.lineWidth = 3.5;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+
+  // Draw slightly imperfect circle
+  const segments = 32;
+  for (let i = 0; i <= segments; i++) {
+    const angle = (i / segments) * Math.PI * 2;
+    const wobble = Math.sin(angle * 3 + seed.xOff1) * 1.5 + Math.cos(angle * 5 + seed.yOff1) * 1;
+    const r = radius + wobble;
+    const x = Math.cos(angle) * r;
+    const y = Math.sin(angle) * r;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  // Chalk dust
+  ctx.globalAlpha = 0.06;
+  ctx.lineWidth = 7;
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawWinLine() {
+  if (!winLine) return;
+  const [a, b2, c] = winLine;
+  const x1 = a[1] * CELL + CELL / 2;
+  const y1 = a[0] * CELL + CELL / 2;
+  const x2 = c[1] * CELL + CELL / 2;
+  const y2 = c[0] * CELL + CELL / 2;
+
+  ctx.save();
+  // Glow
+  ctx.strokeStyle = 'rgba(122,168,122,0.3)';
+  ctx.lineWidth = 12;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.stroke();
+  // Main line
+  ctx.strokeStyle = 'rgba(160,220,160,0.9)';
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function updateDust() {
+  for (const p of dustParticles) {
+    p.x += p.vx;
+    p.y += p.vy;
+    if (p.x < 0) p.x = BOARD_PX;
+    if (p.x > BOARD_PX) p.x = 0;
+    if (p.y < 0) p.y = BOARD_PX;
+    if (p.y > BOARD_PX) p.y = 0;
+  }
+}
+
+function drawDust() {
+  for (const p of dustParticles) {
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(200,210,190,${p.alpha})`;
+    ctx.fill();
+  }
+}
+
+function draw() {
+  // Board background - chalkboard
+  ctx.fillStyle = '#2a3a2a';
+  ctx.fillRect(0, 0, BOARD_PX, BOARD_PX);
+
+  // Subtle chalkboard texture
+  ctx.save();
+  ctx.globalAlpha = 0.03;
+  for (let i = 0; i < 200; i++) {
+    const x = Math.random() * BOARD_PX;
+    const y = Math.random() * BOARD_PX;
+    ctx.fillStyle = Math.random() > 0.5 ? '#fff' : '#1a2a1a';
+    ctx.fillRect(x, y, Math.random() * 3 + 0.5, Math.random() * 0.5 + 0.3);
+  }
+  ctx.restore();
+
+  // Chalk dust particles
+  updateDust();
+  drawDust();
+
+  // Grid lines
+  // Vertical lines
+  drawChalkLine(CELL, 8, CELL, BOARD_PX - 8, chalkSeeds[0]);
+  drawChalkLine(CELL * 2, 8, CELL * 2, BOARD_PX - 8, chalkSeeds[1]);
+  // Horizontal lines
+  drawChalkLine(8, CELL, BOARD_PX - 8, CELL, chalkSeeds[2]);
+  drawChalkLine(8, CELL * 2, BOARD_PX - 8, CELL * 2, chalkSeeds[3]);
+
+  // Hover highlight
+  if (hoverCell && !gameOver && !aiThinking) {
+    const [hr, hc] = hoverCell;
+    if (board[hr][hc] === EMPTY) {
+      ctx.fillStyle = 'rgba(122,168,122,0.08)';
+      ctx.fillRect(hc * CELL + 2, hr * CELL + 2, CELL - 4, CELL - 4);
+    }
+  }
+
+  // Pieces
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 3; c++) {
+      if (board[r][c] === EMPTY) continue;
+      const cx = c * CELL + CELL / 2;
+      const cy = r * CELL + CELL / 2;
+      const seed = chalkSeeds[4 + r * 3 + c] || { xOff1: 0, yOff1: 0, xOff2: 0, yOff2: 0, rot: 0 };
+      if (board[r][c] === X) {
+        drawX(cx, cy, CELL, seed);
+      } else {
+        drawO(cx, cy, CELL, seed);
+      }
+    }
+  }
+
+  // Win line
+  drawWinLine();
+}
+
+// ── Dust Animation Loop ──
+let dustAnimFrame;
+function animateDust() {
+  if (!gameOver && !aiThinking) {
+    // Only animate dust subtly when idle
+  }
+  draw();
+  dustAnimFrame = requestAnimationFrame(animateDust);
+}
+// Start dust animation at low rate
+let lastDustTime = 0;
+function dustLoop(time) {
+  if (time - lastDustTime > 100) { // ~10fps for subtle dust
+    lastDustTime = time;
+    draw();
+  }
+  dustAnimFrame = requestAnimationFrame(dustLoop);
+}
+dustLoop(0);
+
+// ── Input ──
+canvas.addEventListener('click', (e) => {
+  if (gameOver || aiThinking) return;
+  if (isAiTurn()) return;
+
+  const rect = canvas.getBoundingClientRect();
+  const mx = (e.clientX - rect.left) * (BOARD_PX / rect.width);
+  const my = (e.clientY - rect.top) * (BOARD_PX / rect.height);
+  const c = Math.floor(mx / CELL);
+  const r = Math.floor(my / CELL);
+  if (r < 0 || r > 2 || c < 0 || c > 2) return;
+
+  makeMove(r, c);
+});
+
+canvas.addEventListener('mousemove', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const mx = (e.clientX - rect.left) * (BOARD_PX / rect.width);
+  const my = (e.clientY - rect.top) * (BOARD_PX / rect.height);
+  const c = Math.floor(mx / CELL);
+  const r = Math.floor(my / CELL);
+  if (r >= 0 && r <= 2 && c >= 0 && c <= 2) {
+    hoverCell = [r, c];
+  } else {
+    hoverCell = null;
+  }
+});
+
+canvas.addEventListener('mouseleave', () => {
+  hoverCell = null;
+});
+
+// New Game button
+document.getElementById('btnNew').addEventListener('click', () => initGame());
+
+// ── Board Serialization for LLM ──
+function boardToString() {
+  const symbols = { [EMPTY]: '.', [X]: 'X', [O]: 'O' };
+  let s = '  1   2   3\n+---+---+---+\n';
+  for (let r = 0; r < 3; r++) {
+    s += '|';
+    for (let c = 0; c < 3; c++) {
+      s += ' ' + symbols[board[r][c]] + ' |';
+    }
+    s += ' ' + (r + 1) + '\n+---+---+---+\n';
+  }
+  return s;
+}
+
+function getGameStatus() {
+  const xCount = board.flat().filter(c => c === X).length;
+  const oCount = board.flat().filter(c => c === O).length;
+  const empty = board.flat().filter(c => c === EMPTY).length;
+  let status = `X (human) has ${xCount} pieces on the board. O (you, the LLM) has ${oCount} pieces. ${empty} empty cells remain. `;
+  if (gameOver) {
+    const result = checkWin(board);
+    if (result && result.winner === X) {
+      status += 'GAME OVER - YOU (O) LOST! The human beat you!';
+    } else if (result && result.winner === O) {
+      status += 'GAME OVER - YOU (O) WON! You defeated the human!';
+    } else {
+      status += "GAME OVER - It's a DRAW!";
+    }
+  } else {
+    status += `Game in progress. ${turn === X ? "Human's" : "Your"} turn.`;
+  }
+  status += ` Score: Human ${scoreX} wins, You ${scoreO} wins, ${scoreD} draws.`;
+  return status;
+}
+
+// ── Chat ──
+const chatPanel = document.getElementById('chatPanel');
+const chatMessages = document.getElementById('chatMessages');
+const chatInput = document.getElementById('chatInput');
+const chatSend = document.getElementById('chatSend');
+let chatSessionId = 'session-ttt-' + Date.now();
+let chatBusy = false;
+
+function showChat(visible) {
+  chatPanel.classList.toggle('visible', visible);
+  document.getElementById('chatSpacer').style.display = visible ? 'none' : 'block';
+}
+
+function addChatBubble(text, type) {
+  const bubble = document.createElement('div');
+  bubble.className = 'chat-bubble ' + type;
+  bubble.textContent = text;
+  chatMessages.appendChild(bubble);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+  return bubble;
+}
+
+async function sendChat() {
+  const text = chatInput.value.trim();
+  if (!text || chatBusy) return;
+
+  chatInput.value = '';
+  addChatBubble(text, 'user');
+
+  chatBusy = true;
+  const typingBubble = addChatBubble('...', 'llm-typing');
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: text,
+        model: llmModel || 'qwen2.5-coder:14b',
+        board: boardToString(),
+        sessionId: chatSessionId,
+        gameStatus: getGameStatus(),
+        gameName: 'tic tac toe'
+      })
+    });
+    const data = await res.json();
+    typingBubble.remove();
+    addChatBubble(data.reply || '...', 'llm');
+  } catch (e) {
+    typingBubble.remove();
+    addChatBubble('*connection lost*', 'system');
+  }
+  chatBusy = false;
+}
+
+chatSend.addEventListener('click', sendChat);
+chatInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') sendChat();
+});
+
+// Auto-taunt: LLM talks trash after its own moves
+let moveCount = 0;
+async function autoTaunt() {
+  if (gameMode !== 'llm' || chatBusy) return;
+  moveCount++;
+  const shouldTaunt = moveCount <= 2 || gameOver || Math.random() < 0.5;
+  if (!shouldTaunt) return;
+
+  chatBusy = true;
+  const typingBubble = addChatBubble('...', 'llm-typing');
+
+  const prompts = [
+    '*just placed an O* React to your own move with trash talk.',
+    '*just made a move* Taunt the human about what you just did.',
+    '*just made a move* Say something cocky about the game.',
+  ];
+  if (gameOver) {
+    const result = checkWin(board);
+    prompts.length = 0;
+    if (result && result.winner === O) {
+      prompts.push('*you just won the tic tac toe game* Gloat mercilessly.');
+    } else if (result && result.winner === X) {
+      prompts.push('*you just lost the tic tac toe game* Be dramatically salty. Demand a rematch.');
+    } else {
+      prompts.push("*the game ended in a draw* React to the draw. You couldn't beat a mere human.");
+    }
+  }
+  const tauntPrompt = prompts[Math.floor(Math.random() * prompts.length)];
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: tauntPrompt,
+        model: llmModel || 'qwen2.5-coder:14b',
+        board: boardToString(),
+        sessionId: chatSessionId,
+        gameStatus: getGameStatus(),
+        gameName: 'tic tac toe'
+      })
+    });
+    const data = await res.json();
+    typingBubble.remove();
+    addChatBubble(data.reply || '...', 'llm');
+  } catch (e) {
+    typingBubble.remove();
+  }
+  chatBusy = false;
+}
+
+// Wrap initGame to clear chat
+const _origInitGame = initGame;
+initGame = function() {
+  _origInitGame();
+  moveCount = 0;
+  chatSessionId = 'session-ttt-' + Date.now();
+  chatMessages.innerHTML = '<div class="chat-bubble system">Chat with the LLM opponent. It bites back.</div>';
+  fetch('/api/chat/clear', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sessionId: chatSessionId })
+  }).catch(() => {});
+};
+
+// ── Start ──
+initGame();
+</script>
+
+</body>
+</html>

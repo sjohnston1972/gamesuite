@@ -1,0 +1,1529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mancala</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@400;500;600&display=swap');
+
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+
+  :root {
+    --bg: #120e0a;
+    --surface: #1c1814;
+    --surface-2: #241f19;
+    --border: #3d3427;
+    --accent: #b8863a;
+    --accent-dim: #7a5a28;
+    --cream: #e8dcc8;
+    --cream-dim: #a89878;
+  }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: var(--bg);
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    overflow: hidden;
+  }
+
+  body {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: max(20px, calc(50vh - 300px));
+    background:
+      radial-gradient(ellipse at 30% 20%, rgba(140,100,40,0.06) 0%, transparent 60%),
+      radial-gradient(ellipse at 70% 80%, rgba(100,60,20,0.05) 0%, transparent 60%),
+      var(--bg);
+  }
+
+  .game-container {
+    display: flex;
+    gap: 30px;
+    align-items: flex-start;
+    user-select: none;
+  }
+
+  .board-frame {
+    position: relative;
+    flex-shrink: 0;
+    padding: 18px;
+    background: linear-gradient(145deg, #4a3c28, #2e2418, #3a2e1e);
+    border-radius: 12px;
+    box-shadow:
+      0 2px 4px rgba(0,0,0,0.4),
+      0 8px 24px rgba(0,0,0,0.5),
+      0 20px 60px rgba(0,0,0,0.4),
+      inset 0 1px 0 rgba(255,255,255,0.06);
+  }
+
+  .board-frame::before {
+    content: '';
+    position: absolute;
+    inset: 4px;
+    border: 1px solid rgba(184,134,58,0.15);
+    border-radius: 10px;
+    pointer-events: none;
+  }
+
+  canvas {
+    display: block;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+
+  .sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 220px;
+    flex-shrink: 0;
+  }
+
+  .back-link {
+    font-size: 13px;
+    color: var(--cream-dim);
+    text-decoration: none;
+    transition: color 0.2s;
+    letter-spacing: 1px;
+  }
+  .back-link:hover { color: var(--accent); }
+
+  .game-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    line-height: 1;
+  }
+  .game-title span {
+    display: block;
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--cream-dim);
+    letter-spacing: 6px;
+    margin-top: 4px;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  /* ── Mode Selector ── */
+  .mode-panel {
+    padding: 14px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .mode-panel h3 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent-dim);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 10px;
+  }
+  .mode-toggle {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+  .mode-btn {
+    flex: 1;
+    padding: 8px 6px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--cream-dim);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+  }
+  .mode-btn:hover {
+    border-color: var(--accent-dim);
+    color: var(--cream);
+  }
+  .mode-btn.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(184,134,58,0.08);
+  }
+  .diff-section {
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    transition: max-height 0.3s ease, opacity 0.25s ease, margin-top 0.3s ease;
+    margin-top: 0;
+  }
+  .diff-section.visible {
+    max-height: 120px;
+    opacity: 1;
+    margin-top: 10px;
+  }
+  .diff-label {
+    font-size: 11px;
+    color: var(--cream-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+  }
+  .diff-btns {
+    display: flex;
+    gap: 6px;
+  }
+  .diff-btn {
+    flex: 1;
+    padding: 7px 4px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--cream-dim);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+  }
+  .diff-btn:hover {
+    border-color: var(--accent-dim);
+    color: var(--cream);
+  }
+  .diff-btn.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(184,134,58,0.08);
+  }
+
+  .model-select {
+    width: 100%;
+    padding: 7px 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    cursor: pointer;
+    outline: none;
+  }
+  .model-select:focus {
+    border-color: var(--accent-dim);
+  }
+
+  .turn-indicator {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    transition: border-color 0.3s;
+  }
+  .turn-indicator.active-player { border-color: var(--accent); }
+  .turn-indicator.active-ai { border-color: #8b5e34; }
+
+  .turn-stone {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+  }
+  .turn-stone.player { background: radial-gradient(circle at 35% 35%, #d4a85a, #7a5020 70%); }
+  .turn-stone.ai { background: radial-gradient(circle at 35% 35%, #9a7048, #3a2a18 70%); }
+
+  .turn-text {
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .turn-label {
+    font-size: 11px;
+    color: var(--cream-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .score-panel {
+    padding: 16px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .score-panel h3 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent-dim);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+  }
+  .score-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+  }
+  .score-row + .score-row { border-top: 1px solid var(--border); }
+  .score-label { font-size: 13px; color: var(--cream-dim); }
+  .score-value { font-family: 'Cormorant Garamond', serif; font-size: 20px; font-weight: 700; }
+  .score-value.player-val { color: var(--accent); }
+  .score-value.ai-val { color: #9a7048; }
+
+  .status-msg {
+    padding: 14px 18px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--cream-dim);
+    line-height: 1.5;
+    height: 67px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    transition: all 0.3s;
+  }
+  .status-msg.winner {
+    border-color: var(--accent);
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .status-msg.thinking {
+    border-color: #8b5e34;
+    color: var(--cream-dim);
+  }
+
+  .btn-new {
+    padding: 12px 20px;
+    background: transparent;
+    border: 1px solid var(--accent-dim);
+    border-radius: 6px;
+    color: var(--accent);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-new:hover {
+    background: rgba(184,134,58,0.1);
+    border-color: var(--accent);
+  }
+
+  /* Thinking dots animation */
+  @keyframes dotPulse {
+    0%, 80%, 100% { opacity: 0.2; }
+    40% { opacity: 1; }
+  }
+  .thinking-dots span {
+    animation: dotPulse 1.4s infinite;
+    font-size: 18px;
+    letter-spacing: 2px;
+  }
+  .thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+  /* ── Chat Panel ── */
+  .chat-spacer {
+    width: 220px;
+    flex-shrink: 0;
+  }
+  .chat-panel {
+    display: none;
+    flex-direction: column;
+    width: 340px;
+    flex-shrink: 0;
+    height: 560px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .chat-panel.visible { display: flex; }
+
+  .chat-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent-dim);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    flex-shrink: 0;
+  }
+
+  .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .chat-bubble {
+    max-width: 85%;
+    padding: 8px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    line-height: 1.45;
+    word-wrap: break-word;
+    animation: fadeIn 0.2s ease;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .chat-bubble.user {
+    align-self: flex-end;
+    background: rgba(184,134,58,0.15);
+    color: var(--cream);
+    border-bottom-right-radius: 4px;
+  }
+  .chat-bubble.llm {
+    align-self: flex-start;
+    background: rgba(154,112,72,0.2);
+    color: var(--cream);
+    border-bottom-left-radius: 4px;
+  }
+  .chat-bubble.system {
+    align-self: center;
+    background: transparent;
+    color: var(--cream-dim);
+    font-size: 11px;
+    font-style: italic;
+    padding: 4px 8px;
+  }
+  .chat-bubble.llm-typing {
+    align-self: flex-start;
+    background: rgba(154,112,72,0.1);
+    color: var(--cream-dim);
+    border-bottom-left-radius: 4px;
+  }
+
+  .chat-input-row {
+    display: flex;
+    gap: 6px;
+    padding: 10px 12px;
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .chat-input {
+    flex: 1;
+    padding: 8px 10px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .chat-input:focus { border-color: var(--accent-dim); }
+  .chat-input::placeholder { color: var(--cream-dim); opacity: 0.5; }
+
+  .chat-send {
+    padding: 8px 14px;
+    background: rgba(184,134,58,0.2);
+    border: 1px solid rgba(184,134,58,0.3);
+    border-radius: 6px;
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .chat-send:hover {
+    background: rgba(184,134,58,0.3);
+    border-color: var(--accent);
+  }
+
+  @media (max-width: 1000px) {
+    .game-container { flex-direction: column; gap: 20px; }
+    .sidebar { flex-direction: row; flex-wrap: wrap; min-width: unset; width: auto !important; }
+    .sidebar > * { flex: 1; min-width: 140px; }
+    .chat-panel { width: 100%; height: 300px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="game-container">
+  <div class="sidebar">
+    <a href="index.html" class="back-link">&larr; Back</a>
+    <div class="game-title">Mancala<span>Kalah Variant</span></div>
+
+    <div class="mode-panel">
+      <h3>Game Mode</h3>
+      <div class="mode-toggle">
+        <button class="mode-btn active" data-mode="1p" id="btn1P">1 Player</button>
+        <button class="mode-btn" data-mode="llm" id="btnLLM">vs LLM</button>
+        <button class="mode-btn" data-mode="2p" id="btn2P">2 Player</button>
+      </div>
+      <div class="diff-section visible" id="diffSection">
+        <div class="diff-label">Difficulty</div>
+        <div class="diff-btns">
+          <button class="diff-btn active" data-diff="4" id="diffEasy">Easy</button>
+          <button class="diff-btn" data-diff="8" id="diffMedium">Medium</button>
+          <button class="diff-btn" data-diff="12" id="diffHard">Hard</button>
+        </div>
+      </div>
+      <div class="diff-section" id="llmSection">
+        <div class="diff-label">Ollama Model</div>
+        <select id="modelSelect" class="model-select">
+          <option>Loading models...</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="turn-indicator" id="turnIndicator">
+      <div class="turn-stone player" id="turnStone"></div>
+      <div>
+        <div class="turn-label">Current Turn</div>
+        <div class="turn-text" id="turnText">Your turn</div>
+      </div>
+    </div>
+
+    <div class="score-panel">
+      <h3>Score</h3>
+      <div class="score-row">
+        <span class="score-label">You <small style="opacity:0.5" id="youLabel">(bottom)</small></span>
+        <span class="score-value player-val" id="scorePlayer">0</span>
+      </div>
+      <div class="score-row">
+        <span class="score-label">Opponent <small style="opacity:0.5" id="cpuLabel">(cpu)</small></span>
+        <span class="score-value ai-val" id="scoreAI">0</span>
+      </div>
+    </div>
+
+    <div class="status-msg" id="statusMsg">Choose a pit to begin.</div>
+
+    <button class="btn-new" id="btnNew">New Game</button>
+  </div>
+
+  <div class="board-frame">
+    <canvas id="board"></canvas>
+  </div>
+
+  <div class="chat-panel" id="chatPanel">
+    <div class="chat-header">Trash Talk</div>
+    <div class="chat-messages" id="chatMessages">
+      <div class="chat-bubble system">Chat with the LLM opponent. It bites back.</div>
+    </div>
+    <div class="chat-input-row">
+      <input type="text" class="chat-input" id="chatInput" placeholder="Talk trash..." maxlength="200" autocomplete="off">
+      <button class="chat-send" id="chatSend">Send</button>
+    </div>
+  </div>
+  <div class="chat-spacer" id="chatSpacer"></div>
+</div>
+
+<script>
+// ── Constants ──
+const PITS = 6;
+const INIT_SEEDS = 4;
+const CW = 700, CH = 280;
+
+// Player indices
+const PLAYER = 0; // bottom row
+const AI = 1;     // top row
+
+// Board layout: pits[0..5] = player pits, pits[6] = player store,
+//               pits[7..12] = AI pits, pits[13] = AI store
+// Total 14 slots
+
+// ── Audio ──
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx;
+function ensureAudio() { if (!audioCtx) audioCtx = new AudioCtx(); }
+
+function playSound(type) {
+  ensureAudio();
+  const actx = audioCtx;
+  const now = actx.currentTime;
+  const g = actx.createGain();
+  g.connect(actx.destination);
+
+  if (type === 'sow') {
+    // Seed clinking - short percussive
+    const bufSize = actx.sampleRate * 0.04;
+    const buf = actx.createBuffer(1, bufSize, actx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < bufSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufSize, 8);
+    }
+    const src = actx.createBufferSource();
+    src.buffer = buf;
+    const filt = actx.createBiquadFilter();
+    filt.type = 'bandpass';
+    filt.frequency.value = 3000 + Math.random() * 2000;
+    filt.Q.value = 5;
+    g.gain.setValueAtTime(0.15, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+    src.connect(filt);
+    filt.connect(g);
+    src.start(now);
+  } else if (type === 'capture') {
+    // Capture: deeper thud + clatter
+    const o = actx.createOscillator();
+    o.type = 'triangle';
+    o.frequency.setValueAtTime(180, now);
+    o.frequency.exponentialRampToValueAtTime(80, now + 0.15);
+    g.gain.setValueAtTime(0.15, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+    o.connect(g);
+    o.start(now);
+    o.stop(now + 0.2);
+    // Clatter overlay
+    const bufSize = actx.sampleRate * 0.1;
+    const buf = actx.createBuffer(1, bufSize, actx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < bufSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufSize, 4);
+    }
+    const src = actx.createBufferSource();
+    src.buffer = buf;
+    const g2 = actx.createGain();
+    g2.gain.setValueAtTime(0.08, now);
+    g2.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+    const filt = actx.createBiquadFilter();
+    filt.type = 'bandpass';
+    filt.frequency.value = 2500;
+    filt.Q.value = 3;
+    src.connect(filt);
+    filt.connect(g2);
+    g2.connect(actx.destination);
+    src.start(now);
+  } else if (type === 'extra') {
+    // Extra turn chime
+    [440, 554, 660].forEach((f, i) => {
+      const o = actx.createOscillator();
+      const gg = actx.createGain();
+      o.type = 'sine';
+      o.frequency.value = f;
+      gg.gain.setValueAtTime(0, now + i * 0.07);
+      gg.gain.linearRampToValueAtTime(0.06, now + i * 0.07 + 0.02);
+      gg.gain.exponentialRampToValueAtTime(0.001, now + i * 0.07 + 0.15);
+      o.connect(gg);
+      gg.connect(actx.destination);
+      o.start(now + i * 0.07);
+      o.stop(now + i * 0.07 + 0.15);
+    });
+  } else if (type === 'win') {
+    [392, 494, 587, 784].forEach((f, i) => {
+      const o = actx.createOscillator();
+      const gg = actx.createGain();
+      o.type = 'sine';
+      o.frequency.value = f;
+      gg.gain.setValueAtTime(0, now + i * 0.12);
+      gg.gain.linearRampToValueAtTime(0.08, now + i * 0.12 + 0.03);
+      gg.gain.exponentialRampToValueAtTime(0.001, now + i * 0.12 + 0.3);
+      o.connect(gg);
+      gg.connect(actx.destination);
+      o.start(now + i * 0.12);
+      o.stop(now + i * 0.12 + 0.3);
+    });
+  }
+}
+
+// ── Canvas Setup ──
+const canvas = document.getElementById('board');
+const ctx = canvas.getContext('2d');
+canvas.width = CW;
+canvas.height = CH;
+canvas.style.width = CW + 'px';
+canvas.style.height = CH + 'px';
+
+// ── Game State ──
+let pits; // 14-element array
+let currentPlayer; // PLAYER or AI
+let gameOver;
+let hoverPit = -1;
+let animating = false;
+let aiThinking = false;
+
+// ── Mode & Difficulty ──
+let gameMode = '1p';
+let difficulty = 4;
+let llmModel = '';
+
+// ── Seed Colors (stable per pit per game) ──
+let seedColors; // [14][maxSeeds] arrays of color strings
+
+const EARTH_TONES = [
+  '#8b6f47', '#a0845c', '#6e5535', '#c4a26e', '#7a6240',
+  '#9c8258', '#b09068', '#5e4830', '#d4b87a', '#8a7050',
+  '#6b5030', '#bfa070', '#947450', '#a89060', '#7e6842'
+];
+
+function generateSeedColors() {
+  seedColors = [];
+  for (let i = 0; i < 14; i++) {
+    const arr = [];
+    for (let j = 0; j < 50; j++) {
+      arr.push(EARTH_TONES[Math.floor(Math.random() * EARTH_TONES.length)]);
+    }
+    seedColors.push(arr);
+  }
+}
+
+// ── Seed Position Offsets (stable per game) ──
+let seedOffsets;
+function generateSeedOffsets() {
+  seedOffsets = [];
+  for (let i = 0; i < 14; i++) {
+    const arr = [];
+    for (let j = 0; j < 50; j++) {
+      arr.push({
+        dx: (Math.random() - 0.5) * 0.7,
+        dy: (Math.random() - 0.5) * 0.7,
+        r: 4 + Math.random() * 1.5
+      });
+    }
+    seedOffsets.push(arr);
+  }
+}
+
+// ── Board Layout Geometry ──
+// Store left: x=15..75, Store right: x=625..685
+// Pits: 6 columns from x=95 to x=605
+const STORE_W = 60, STORE_H = 200;
+const PIT_RX = 36, PIT_RY = 40;
+const STORE_LX = 45, STORE_RX = CW - 45;
+const PIT_Y_TOP = 80, PIT_Y_BOT = 200;
+const PIT_START_X = 120, PIT_GAP = 88;
+
+function pitCenter(index) {
+  // Player pits: 0-5 (left to right, bottom row)
+  // Player store: 6 (right side)
+  // AI pits: 7-12 (right to left, top row)
+  // AI store: 13 (left side)
+  if (index === 6) return { x: STORE_RX, y: CH / 2 };
+  if (index === 13) return { x: STORE_LX, y: CH / 2 };
+  if (index < 6) {
+    return { x: PIT_START_X + index * PIT_GAP, y: PIT_Y_BOT };
+  }
+  // AI pits 7-12: right to left on top
+  return { x: PIT_START_X + (12 - index) * PIT_GAP, y: PIT_Y_TOP };
+}
+
+function isStore(index) { return index === 6 || index === 13; }
+
+// ── Drawing ──
+function draw() {
+  ctx.clearRect(0, 0, CW, CH);
+
+  // Board background - dark carved wood
+  ctx.fillStyle = '#3a2a18';
+  ctx.fillRect(0, 0, CW, CH);
+
+  // Wood grain texture
+  ctx.save();
+  ctx.globalAlpha = 0.08;
+  for (let i = 0; i < 40; i++) {
+    const y = Math.random() * CH;
+    ctx.strokeStyle = Math.random() > 0.5 ? '#2a1a08' : '#4a3a28';
+    ctx.lineWidth = Math.random() * 2 + 0.5;
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.bezierCurveTo(CW * 0.3, y + (Math.random() - 0.5) * 8,
+                       CW * 0.7, y + (Math.random() - 0.5) * 8, CW, y);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // Draw stores
+  drawStore(13, 'left');
+  drawStore(6, 'right');
+
+  // Draw pits
+  for (let i = 0; i < 6; i++) {
+    drawPit(i, false);      // player pits (bottom)
+    drawPit(7 + i, true);   // AI pits (top)
+  }
+
+  // Draw pit labels
+  ctx.font = '600 11px "Cormorant Garamond", serif';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = 'rgba(184,134,58,0.4)';
+  for (let i = 0; i < 6; i++) {
+    const pc = pitCenter(i);
+    ctx.fillText(String(i + 1), pc.x, CH - 10);
+    const ac = pitCenter(7 + i);
+    ctx.fillText(String(6 - i), ac.x, 20);
+  }
+
+  // Store labels
+  ctx.font = '600 12px "Cormorant Garamond", serif';
+  ctx.fillStyle = 'rgba(184,134,58,0.5)';
+  ctx.fillText('YOU', STORE_RX, CH - 8);
+  ctx.fillText(gameMode === '2p' ? 'P2' : 'CPU', STORE_LX, 18);
+}
+
+function drawStore(index, side) {
+  const { x, y } = pitCenter(index);
+  const rx = STORE_W / 2, ry = STORE_H / 2;
+
+  // Carved depression
+  ctx.save();
+  ctx.beginPath();
+  ctx.ellipse(x, y, rx + 2, ry + 2, 0, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
+  ctx.fillStyle = '#1e1408';
+  ctx.fill();
+
+  // Inner shadow
+  const grad = ctx.createRadialGradient(x, y - ry * 0.2, ry * 0.1, x, y, ry);
+  grad.addColorStop(0, 'rgba(60,45,25,0.3)');
+  grad.addColorStop(1, 'rgba(10,6,2,0.6)');
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Rim highlight
+  ctx.beginPath();
+  ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(184,134,58,0.12)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  ctx.restore();
+
+  // Seeds
+  drawSeeds(index, x, y, rx * 0.7, ry * 0.85);
+
+  // Count
+  ctx.font = '700 16px "Cormorant Garamond", serif';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = 'rgba(232,220,200,0.7)';
+  ctx.fillText(pits[index], x, y + ry + 16 > CH ? y - ry - 6 : y + ry + 16);
+}
+
+function drawPit(index, isTop) {
+  const { x, y } = pitCenter(index);
+  const isHover = hoverPit === index && !gameOver && !animating && !aiThinking;
+  const canClick = canSelectPit(index);
+  const rx = PIT_RX, ry = PIT_RY;
+
+  // Hover highlight
+  if (isHover && canClick) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.ellipse(x, y, rx + 4, ry + 4, 0, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(184,134,58,0.1)';
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // Carved pit
+  ctx.save();
+  ctx.beginPath();
+  ctx.ellipse(x, y, rx + 1, ry + 1, 0, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0,0,0,0.25)';
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
+  ctx.fillStyle = '#1a1008';
+  ctx.fill();
+
+  // Inner depth gradient
+  const grad = ctx.createRadialGradient(x, y - ry * 0.2, ry * 0.1, x, y, ry);
+  grad.addColorStop(0, 'rgba(50,38,20,0.3)');
+  grad.addColorStop(1, 'rgba(8,4,1,0.5)');
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Rim
+  ctx.beginPath();
+  ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
+  ctx.strokeStyle = isHover && canClick ? 'rgba(184,134,58,0.3)' : 'rgba(184,134,58,0.1)';
+  ctx.lineWidth = isHover && canClick ? 2 : 1;
+  ctx.stroke();
+  ctx.restore();
+
+  // Seeds
+  drawSeeds(index, x, y, rx * 0.65, ry * 0.7);
+
+  // Count
+  ctx.font = '600 13px "DM Sans", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = pits[index] > 0 ? 'rgba(232,220,200,0.8)' : 'rgba(232,220,200,0.3)';
+  const labelY = isTop ? y - ry - 8 : y + ry + 16;
+  ctx.fillText(pits[index], x, labelY);
+}
+
+function drawSeeds(pitIndex, cx, cy, spreadX, spreadY) {
+  const count = pits[pitIndex];
+  if (count === 0) return;
+
+  const offsets = seedOffsets[pitIndex];
+  const colors = seedColors[pitIndex];
+
+  for (let i = 0; i < count && i < 48; i++) {
+    const off = offsets[i % offsets.length];
+    const sx = cx + off.dx * spreadX;
+    const sy = cy + off.dy * spreadY;
+    const r = off.r;
+
+    // Shadow
+    ctx.beginPath();
+    ctx.ellipse(sx + 1, sy + 1.5, r, r * 0.8, 0, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.fill();
+
+    // Stone body
+    ctx.beginPath();
+    ctx.ellipse(sx, sy, r, r * 0.8, 0, 0, Math.PI * 2);
+    ctx.fillStyle = colors[i % colors.length];
+    ctx.fill();
+
+    // Highlight
+    ctx.beginPath();
+    ctx.ellipse(sx - r * 0.25, sy - r * 0.2, r * 0.4, r * 0.3, -0.3, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+    ctx.fill();
+  }
+}
+
+// ── Hit Detection ──
+function getPitAtPos(mx, my) {
+  // Check player pits (bottom row)
+  for (let i = 0; i < 6; i++) {
+    const { x, y } = pitCenter(i);
+    const dx = (mx - x) / PIT_RX, dy = (my - y) / PIT_RY;
+    if (dx * dx + dy * dy <= 1) return i;
+  }
+  // Check AI pits (top row)
+  for (let i = 7; i <= 12; i++) {
+    const { x, y } = pitCenter(i);
+    const dx = (mx - x) / PIT_RX, dy = (my - y) / PIT_RY;
+    if (dx * dx + dy * dy <= 1) return i;
+  }
+  return -1;
+}
+
+function canSelectPit(index) {
+  if (gameOver || animating || aiThinking) return false;
+  if (currentPlayer === PLAYER) {
+    return index >= 0 && index < 6 && pits[index] > 0;
+  } else if (currentPlayer === AI && gameMode === '2p') {
+    return index >= 7 && index <= 12 && pits[index] > 0;
+  }
+  return false;
+}
+
+// ── Mouse Events ──
+canvas.addEventListener('mousemove', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const mx = (e.clientX - rect.left) * (CW / rect.width);
+  const my = (e.clientY - rect.top) * (CH / rect.height);
+  const pit = getPitAtPos(mx, my);
+  if (pit !== hoverPit) {
+    hoverPit = pit;
+    draw();
+  }
+  canvas.style.cursor = (pit >= 0 && canSelectPit(pit)) ? 'pointer' : 'default';
+});
+
+canvas.addEventListener('mouseleave', () => {
+  hoverPit = -1;
+  draw();
+});
+
+canvas.addEventListener('click', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const mx = (e.clientX - rect.left) * (CW / rect.width);
+  const my = (e.clientY - rect.top) * (CH / rect.height);
+  const pit = getPitAtPos(mx, my);
+  if (pit >= 0 && canSelectPit(pit)) {
+    makeMove(pit);
+  }
+});
+
+// ── Game Logic ──
+function initGame() {
+  pits = new Array(14).fill(0);
+  for (let i = 0; i < 6; i++) {
+    pits[i] = INIT_SEEDS;
+    pits[7 + i] = INIT_SEEDS;
+  }
+  // Stores start at 0
+  pits[6] = 0;
+  pits[13] = 0;
+  currentPlayer = PLAYER;
+  gameOver = false;
+  animating = false;
+  aiThinking = false;
+  generateSeedColors();
+  generateSeedOffsets();
+  updateUI();
+  draw();
+}
+
+function sow(pitIndex, pitsState) {
+  // Pick up seeds from pit
+  let seeds = pitsState[pitIndex];
+  pitsState[pitIndex] = 0;
+  let idx = pitIndex;
+  const myStore = (pitIndex < 7) ? 6 : 13;
+  const oppStore = (pitIndex < 7) ? 13 : 6;
+
+  while (seeds > 0) {
+    idx = (idx + 1) % 14;
+    if (idx === oppStore) continue; // skip opponent's store
+    pitsState[idx] = pitsState[idx] + 1;
+    seeds--;
+  }
+
+  return idx; // last seed index
+}
+
+function checkCapture(lastIdx, pitsState, player) {
+  const myStore = player === PLAYER ? 6 : 13;
+  const myStart = player === PLAYER ? 0 : 7;
+  const myEnd = player === PLAYER ? 5 : 12;
+
+  if (lastIdx >= myStart && lastIdx <= myEnd && pitsState[lastIdx] === 1) {
+    // Last seed in empty pit on own side
+    const opposite = 12 - lastIdx; // mirror index
+    if (pitsState[opposite] > 0) {
+      const captured = pitsState[opposite] + 1; // opposite seeds + the one that landed
+      pitsState[myStore] += captured;
+      pitsState[opposite] = 0;
+      pitsState[lastIdx] = 0;
+      return captured;
+    }
+  }
+  return 0;
+}
+
+function isExtraTurn(lastIdx, player) {
+  return lastIdx === (player === PLAYER ? 6 : 13);
+}
+
+function checkGameEnd(pitsState) {
+  let playerEmpty = true, aiEmpty = true;
+  for (let i = 0; i < 6; i++) {
+    if (pitsState[i] > 0) playerEmpty = false;
+    if (pitsState[7 + i] > 0) aiEmpty = false;
+  }
+  if (playerEmpty || aiEmpty) {
+    // Remaining seeds go to opponent's store
+    for (let i = 0; i < 6; i++) {
+      if (playerEmpty) {
+        pitsState[13] += pitsState[7 + i];
+        pitsState[7 + i] = 0;
+      } else {
+        pitsState[6] += pitsState[i];
+        pitsState[i] = 0;
+      }
+    }
+    return true;
+  }
+  return false;
+}
+
+function makeMove(pitIndex) {
+  if (gameOver || animating || aiThinking) return;
+
+  animating = true;
+  const player = currentPlayer;
+
+  // Animate sowing
+  const seedCount = pits[pitIndex];
+  pits[pitIndex] = 0;
+  draw();
+
+  let idx = pitIndex;
+  const myStore = player === PLAYER ? 6 : 13;
+  const oppStore = player === PLAYER ? 13 : 6;
+  let remaining = seedCount;
+  let step = 0;
+
+  function sowStep() {
+    if (remaining <= 0) {
+      // Sowing done; check capture
+      const captured = checkCapture(idx, pits, player);
+      if (captured > 0) {
+        playSound('capture');
+        generateSeedOffsets();
+      }
+      draw();
+
+      // Check game end
+      if (checkGameEnd(pits)) {
+        gameOver = true;
+        animating = false;
+        generateSeedOffsets();
+        draw();
+        updateUI();
+        endGame();
+        return;
+      }
+
+      // Check extra turn
+      if (isExtraTurn(idx, player)) {
+        playSound('extra');
+        animating = false;
+        // Same player goes again
+        setStatus(player === PLAYER ? 'Extra turn! Go again.' : 'Opponent gets another turn...');
+        updateUI();
+        draw();
+        if ((gameMode === '1p' || gameMode === 'llm') && currentPlayer === AI) {
+          scheduleAI();
+        }
+        return;
+      }
+
+      // Switch player
+      currentPlayer = currentPlayer === PLAYER ? AI : PLAYER;
+      animating = false;
+      updateUI();
+      draw();
+
+      if ((gameMode === '1p' || gameMode === 'llm') && currentPlayer === AI) {
+        scheduleAI();
+      }
+      return;
+    }
+
+    idx = (idx + 1) % 14;
+    if (idx === oppStore) {
+      idx = (idx + 1) % 14;
+    }
+    pits[idx]++;
+    remaining--;
+    playSound('sow');
+    generateSeedOffsets(); // re-randomize positions for visual movement
+    draw();
+
+    const delay = Math.max(60, 150 - seedCount * 5);
+    setTimeout(sowStep, delay);
+  }
+
+  setTimeout(sowStep, 100);
+}
+
+function scheduleAI() {
+  aiThinking = true;
+  setStatus('<span class="thinking-dots"><span>.</span><span>.</span><span>.</span></span> Thinking...');
+  document.getElementById('statusMsg').classList.add('thinking');
+  draw();
+
+  setTimeout(() => {
+    const bestPit = aiChooseMove();
+    aiThinking = false;
+    document.getElementById('statusMsg').classList.remove('thinking');
+    if (bestPit >= 0) {
+      makeMove(bestPit);
+      // Auto-taunt after AI move animation finishes
+      setTimeout(() => { autoTaunt(); }, 500);
+    }
+  }, 300);
+}
+
+// ── AI: Minimax with Alpha-Beta ──
+function aiChooseMove() {
+  const depth = difficulty;
+  let bestScore = -Infinity;
+  let bestPit = -1;
+
+  for (let i = 7; i <= 12; i++) {
+    if (pits[i] === 0) continue;
+    const simPits = pits.slice();
+    const result = simulateMove(simPits, i, AI);
+    const score = minimax(simPits, depth - 1, -Infinity, Infinity, result.extraTurn ? true : false, result.extraTurn ? AI : PLAYER);
+    if (score > bestScore) {
+      bestScore = score;
+      bestPit = i;
+    }
+  }
+  return bestPit;
+}
+
+function simulateMove(pitsState, pitIndex, player) {
+  const lastIdx = sow(pitIndex, pitsState);
+  const captured = checkCapture(lastIdx, pitsState, player);
+  const ended = checkGameEnd(pitsState);
+  const extraTurn = !ended && isExtraTurn(lastIdx, player);
+  return { lastIdx, captured, ended, extraTurn };
+}
+
+function minimax(pitsState, depth, alpha, beta, isMaximizing, player) {
+  // Check terminal
+  let playerEmpty = true, aiEmpty = true;
+  for (let i = 0; i < 6; i++) {
+    if (pitsState[i] > 0) playerEmpty = false;
+    if (pitsState[7 + i] > 0) aiEmpty = false;
+  }
+  if (playerEmpty || aiEmpty || depth === 0) {
+    return evaluate(pitsState);
+  }
+
+  const start = player === PLAYER ? 0 : 7;
+  const end = player === PLAYER ? 5 : 12;
+
+  if (isMaximizing || player === AI) {
+    let maxEval = -Infinity;
+    for (let i = start; i <= end; i++) {
+      if (pitsState[i] === 0) continue;
+      const sim = pitsState.slice();
+      const result = simulateMove(sim, i, player);
+      let ev;
+      if (result.ended) {
+        ev = evaluate(sim);
+      } else if (result.extraTurn) {
+        ev = minimax(sim, depth - 1, alpha, beta, player === AI, player);
+      } else {
+        ev = minimax(sim, depth - 1, alpha, beta, player !== AI, player === PLAYER ? AI : PLAYER);
+      }
+      maxEval = Math.max(maxEval, ev);
+      alpha = Math.max(alpha, ev);
+      if (beta <= alpha) break;
+    }
+    return maxEval === -Infinity ? evaluate(pitsState) : maxEval;
+  } else {
+    let minEval = Infinity;
+    for (let i = start; i <= end; i++) {
+      if (pitsState[i] === 0) continue;
+      const sim = pitsState.slice();
+      const result = simulateMove(sim, i, player);
+      let ev;
+      if (result.ended) {
+        ev = evaluate(sim);
+      } else if (result.extraTurn) {
+        ev = minimax(sim, depth - 1, alpha, beta, player === AI, player);
+      } else {
+        ev = minimax(sim, depth - 1, alpha, beta, player !== AI, player === PLAYER ? AI : PLAYER);
+      }
+      minEval = Math.min(minEval, ev);
+      beta = Math.min(beta, ev);
+      if (beta <= alpha) break;
+    }
+    return minEval === Infinity ? evaluate(pitsState) : minEval;
+  }
+}
+
+function evaluate(pitsState) {
+  // Score difference (AI store - Player store)
+  let score = (pitsState[13] - pitsState[6]) * 10;
+
+  // Seeds on AI side vs player side
+  let aiSeeds = 0, playerSeeds = 0;
+  for (let i = 0; i < 6; i++) {
+    playerSeeds += pitsState[i];
+    aiSeeds += pitsState[7 + i];
+  }
+  score += (aiSeeds - playerSeeds) * 2;
+
+  // Extra turn potential: if a pit has exactly N seeds to land in store
+  for (let i = 7; i <= 12; i++) {
+    const dist = 13 - i; // distance to AI store
+    if (pitsState[i] === dist) score += 4;
+  }
+  for (let i = 0; i < 6; i++) {
+    const dist = 6 - i;
+    if (pitsState[i] === dist) score -= 4;
+  }
+
+  // Capture potential
+  for (let i = 7; i <= 12; i++) {
+    if (pitsState[i] === 0) {
+      const opp = 12 - i;
+      if (pitsState[opp] > 0) score += pitsState[opp];
+    }
+  }
+
+  return score;
+}
+
+// ── UI Updates ──
+function updateUI() {
+  // Scores
+  document.getElementById('scorePlayer').textContent = pits[6];
+  document.getElementById('scoreAI').textContent = pits[13];
+
+  // Turn indicator
+  const ti = document.getElementById('turnIndicator');
+  const ts = document.getElementById('turnStone');
+  const tt = document.getElementById('turnText');
+  ti.classList.remove('active-player', 'active-ai');
+
+  if (gameOver) {
+    tt.textContent = 'Game Over';
+  } else if (currentPlayer === PLAYER) {
+    ti.classList.add('active-player');
+    ts.className = 'turn-stone player';
+    tt.textContent = 'Your turn';
+  } else {
+    ti.classList.add('active-ai');
+    ts.className = 'turn-stone ai';
+    tt.textContent = gameMode === '2p' ? "Player 2's turn" : 'Opponent thinking...';
+  }
+
+  // Labels
+  const isSingle = gameMode === '1p' || gameMode === 'llm';
+  document.getElementById('youLabel').style.display = '';
+  const cpuLabel = document.getElementById('cpuLabel');
+  cpuLabel.textContent = gameMode === '2p' ? '(top)' : gameMode === 'llm' ? '(llm)' : '(cpu)';
+
+  if (!gameOver && !animating && !aiThinking) {
+    if (currentPlayer === PLAYER) {
+      setStatus('Choose a pit to sow seeds.');
+    } else if (gameMode === '2p') {
+      setStatus("Player 2's turn. Choose a pit.");
+    }
+  }
+}
+
+function setStatus(msg) {
+  const el = document.getElementById('statusMsg');
+  el.innerHTML = msg;
+  el.classList.remove('winner', 'thinking');
+}
+
+function endGame() {
+  const playerScore = pits[6];
+  const aiScore = pits[13];
+  let msg;
+  if (playerScore > aiScore) {
+    msg = gameMode === '2p' ? `Player 1 wins ${playerScore}-${aiScore}!` : `You win ${playerScore}-${aiScore}!`;
+    playSound('win');
+  } else if (aiScore > playerScore) {
+    msg = gameMode === '2p' ? `Player 2 wins ${aiScore}-${playerScore}!` : `Opponent wins ${aiScore}-${playerScore}!`;
+    if (gameMode === '2p') playSound('win');
+  } else {
+    msg = `It's a tie! ${playerScore}-${aiScore}`;
+  }
+  setStatus(msg);
+  document.getElementById('statusMsg').classList.add('winner');
+
+  // Final taunt
+  setTimeout(() => autoTaunt(), 600);
+}
+
+// ── Mode UI ──
+document.getElementById('btn1P').addEventListener('click', () => setMode('1p'));
+document.getElementById('btn2P').addEventListener('click', () => setMode('2p'));
+document.getElementById('btnLLM').addEventListener('click', () => setMode('llm'));
+document.getElementById('diffEasy').addEventListener('click', () => setDifficulty(4));
+document.getElementById('diffMedium').addEventListener('click', () => setDifficulty(8));
+document.getElementById('diffHard').addEventListener('click', () => setDifficulty(12));
+document.getElementById('btnNew').addEventListener('click', () => initGame());
+
+function setMode(m) {
+  gameMode = m;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === m));
+  document.getElementById('diffSection').classList.toggle('visible', m === '1p' || m === 'llm');
+  document.getElementById('llmSection').classList.toggle('visible', m === 'llm');
+  if (m === 'llm') loadModels();
+  showChat(m === 'llm');
+  initGame();
+}
+
+function setDifficulty(d) {
+  difficulty = d;
+  document.querySelectorAll('.diff-btn').forEach(b => b.classList.toggle('active', +b.dataset.diff === d));
+  initGame();
+}
+
+// ── Ollama Model Loading ──
+async function loadModels() {
+  const sel = document.getElementById('modelSelect');
+  try {
+    const res = await fetch('/api/models');
+    const data = await res.json();
+    if (data.models && data.models.length > 0) {
+      sel.innerHTML = '';
+      data.models.forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        sel.appendChild(opt);
+      });
+      const preferred = data.models.find(m => m.includes('coder:14b')) || data.models[0];
+      sel.value = preferred;
+      llmModel = preferred;
+    }
+  } catch (e) {
+    sel.innerHTML = '<option>Connection error</option>';
+  }
+}
+document.getElementById('modelSelect').addEventListener('change', (e) => {
+  llmModel = e.target.value;
+});
+
+// ── Chat ──
+const chatPanel = document.getElementById('chatPanel');
+const chatMessages = document.getElementById('chatMessages');
+const chatInput = document.getElementById('chatInput');
+const chatSend = document.getElementById('chatSend');
+let chatSessionId = 'mancala-' + Date.now();
+let chatBusy = false;
+
+function showChat(visible) {
+  chatPanel.classList.toggle('visible', visible);
+  document.getElementById('chatSpacer').style.display = visible ? 'none' : 'block';
+}
+
+function addChatBubble(text, type) {
+  const bubble = document.createElement('div');
+  bubble.className = 'chat-bubble ' + type;
+  bubble.textContent = text;
+  chatMessages.appendChild(bubble);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+  return bubble;
+}
+
+function boardToString() {
+  let s = 'AI Store: ' + pits[13] + ' | AI Pits: ';
+  for (let i = 12; i >= 7; i--) s += pits[i] + ' ';
+  s += '\nPlayer Pits: ';
+  for (let i = 0; i < 6; i++) s += pits[i] + ' ';
+  s += '| Player Store: ' + pits[6];
+  return s;
+}
+
+function getGameStatus() {
+  const ps = pits[6], as = pits[13];
+  let status = `Player (human) store: ${ps}. Opponent (you, the LLM) store: ${as}. `;
+  if (ps > as) status += `You are LOSING by ${ps - as} seeds! The human is beating you! `;
+  else if (as > ps) status += `You are WINNING by ${as - ps} seeds! You're crushing them! `;
+  else status += `The game is TIED. `;
+  if (gameOver) {
+    if (ps > as) status += `GAME OVER - YOU LOST! The human beat you!`;
+    else if (as > ps) status += `GAME OVER - YOU WON! You destroyed the human!`;
+    else status += `GAME OVER - IT'S A TIE!`;
+  } else {
+    status += `Game in progress. ${currentPlayer === PLAYER ? "Human's" : "Your"} turn.`;
+  }
+  return status;
+}
+
+async function sendChat() {
+  const text = chatInput.value.trim();
+  if (!text || chatBusy) return;
+
+  chatInput.value = '';
+  addChatBubble(text, 'user');
+
+  chatBusy = true;
+  const typingBubble = addChatBubble('...', 'llm-typing');
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: text,
+        model: llmModel || 'qwen2.5-coder:14b',
+        board: boardToString(),
+        sessionId: chatSessionId,
+        gameStatus: getGameStatus(),
+        gameName: 'mancala'
+      })
+    });
+    const data = await res.json();
+    typingBubble.remove();
+    addChatBubble(data.reply || '...', 'llm');
+  } catch (e) {
+    typingBubble.remove();
+    addChatBubble('*connection lost*', 'system');
+  }
+  chatBusy = false;
+}
+
+chatSend.addEventListener('click', sendChat);
+chatInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') sendChat();
+});
+
+// Auto-taunt
+let moveCount = 0;
+async function autoTaunt() {
+  if (gameMode !== 'llm' || chatBusy) return;
+  moveCount++;
+  const shouldTaunt = moveCount === 1 || gameOver || Math.random() < 0.4;
+  if (!shouldTaunt) return;
+
+  chatBusy = true;
+  const typingBubble = addChatBubble('...', 'llm-typing');
+
+  const prompts = [
+    '*just made a move* React to your own Mancala move with trash talk.',
+    '*just sowed seeds* Taunt the human about the current board state.',
+    '*just made a move* Say something cocky about Mancala strategy.',
+  ];
+  if (gameOver && pits[13] > pits[6]) {
+    prompts.length = 0;
+    prompts.push('*you just won the Mancala game* Gloat mercilessly. You destroyed them.');
+  } else if (gameOver && pits[6] > pits[13]) {
+    prompts.length = 0;
+    prompts.push('*you just lost the Mancala game* Be dramatically salty. Demand a rematch.');
+  } else if (gameOver) {
+    prompts.length = 0;
+    prompts.push('*the Mancala game ended in a tie* React with disbelief.');
+  }
+  const tauntPrompt = prompts[Math.floor(Math.random() * prompts.length)];
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: tauntPrompt,
+        model: llmModel || 'qwen2.5-coder:14b',
+        board: boardToString(),
+        sessionId: chatSessionId,
+        gameStatus: getGameStatus(),
+        gameName: 'mancala'
+      })
+    });
+    const data = await res.json();
+    typingBubble.remove();
+    addChatBubble(data.reply || '...', 'llm');
+  } catch (e) {
+    typingBubble.remove();
+  }
+  chatBusy = false;
+}
+
+// Clear chat on new game
+const origInitGame = initGame;
+initGame = function() {
+  origInitGame();
+  moveCount = 0;
+  chatSessionId = 'mancala-' + Date.now();
+  chatMessages.innerHTML = '<div class="chat-bubble system">Chat with the LLM opponent. It bites back.</div>';
+  fetch('/api/chat/clear', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sessionId: chatSessionId })
+  }).catch(() => {});
+};
+
+// ── Start ──
+initGame();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,1197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nim</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@400;500;600&display=swap');
+
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+
+  :root {
+    --bg: #0e100e;
+    --surface: #151a15;
+    --surface-2: #1a201a;
+    --border: #2a332a;
+    --accent: #44cc66;
+    --accent-dim: #2a7a3a;
+    --cream: #d0e8d0;
+    --cream-dim: #7a9a7a;
+  }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: var(--bg);
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    overflow: hidden;
+  }
+
+  body {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: max(20px, calc(50vh - 320px));
+    background:
+      radial-gradient(ellipse at 30% 20%, rgba(68,204,102,0.04) 0%, transparent 60%),
+      radial-gradient(ellipse at 70% 80%, rgba(40,120,60,0.03) 0%, transparent 60%),
+      var(--bg);
+  }
+
+  .game-container {
+    display: flex;
+    gap: 30px;
+    align-items: flex-start;
+    user-select: none;
+  }
+
+  .board-frame {
+    position: relative;
+    flex-shrink: 0;
+    padding: 18px;
+    background: linear-gradient(145deg, #1a2a1a, #0e160e, #152015);
+    border-radius: 8px;
+    box-shadow:
+      0 2px 4px rgba(0,0,0,0.4),
+      0 8px 24px rgba(0,0,0,0.5),
+      0 20px 60px rgba(0,0,0,0.4),
+      inset 0 1px 0 rgba(68,204,102,0.06);
+  }
+
+  .board-frame::before {
+    content: '';
+    position: absolute;
+    inset: 4px;
+    border: 1px solid rgba(68,204,102,0.1);
+    border-radius: 6px;
+    pointer-events: none;
+  }
+
+  canvas {
+    display: block;
+    border-radius: 3px;
+    cursor: pointer;
+  }
+
+  .sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 220px;
+    flex-shrink: 0;
+  }
+
+  .back-link {
+    font-size: 12px;
+    color: var(--cream-dim);
+    text-decoration: none;
+    letter-spacing: 1px;
+    transition: color 0.2s;
+  }
+  .back-link:hover { color: var(--accent); }
+
+  .game-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    line-height: 1;
+  }
+  .game-title span {
+    display: block;
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--cream-dim);
+    letter-spacing: 6px;
+    margin-top: 4px;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  /* ── Mode Selector ── */
+  .mode-panel {
+    padding: 14px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .mode-panel h3 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent-dim);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 10px;
+  }
+  .mode-toggle {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+  .mode-btn {
+    flex: 1;
+    padding: 8px 6px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--cream-dim);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+  }
+  .mode-btn:hover {
+    border-color: var(--accent-dim);
+    color: var(--cream);
+  }
+  .mode-btn.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(68,204,102,0.08);
+  }
+  .diff-section {
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    transition: max-height 0.3s ease, opacity 0.25s ease, margin-top 0.3s ease;
+    margin-top: 0;
+  }
+  .diff-section.visible {
+    max-height: 120px;
+    opacity: 1;
+    margin-top: 10px;
+  }
+  .diff-label {
+    font-size: 11px;
+    color: var(--cream-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+  }
+  .diff-btns {
+    display: flex;
+    gap: 6px;
+  }
+  .diff-btn {
+    flex: 1;
+    padding: 7px 4px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--cream-dim);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+  }
+  .diff-btn:hover {
+    border-color: var(--accent-dim);
+    color: var(--cream);
+  }
+  .diff-btn.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(68,204,102,0.08);
+  }
+
+  .model-select {
+    width: 100%;
+    padding: 7px 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    cursor: pointer;
+    outline: none;
+  }
+  .model-select:focus {
+    border-color: var(--accent-dim);
+  }
+
+  .turn-indicator {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    transition: border-color 0.3s;
+  }
+  .turn-indicator.active-p1 { border-color: var(--accent); }
+  .turn-indicator.active-p2 { border-color: #cc6644; }
+
+  .turn-disc {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+  }
+  .turn-disc.p1 { background: radial-gradient(circle at 35% 35%, #66ee88, #228833 70%); }
+  .turn-disc.p2 { background: radial-gradient(circle at 35% 35%, #ee8866, #883322 70%); }
+
+  .turn-text {
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .turn-label {
+    font-size: 11px;
+    color: var(--cream-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .status-msg {
+    padding: 14px 18px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--cream-dim);
+    line-height: 1.5;
+    height: 67px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    transition: all 0.3s;
+  }
+  .status-msg.winner {
+    border-color: var(--accent);
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .status-msg.thinking {
+    border-color: #cc6644;
+    color: var(--cream-dim);
+  }
+
+  .btn-take {
+    padding: 12px 20px;
+    background: rgba(68,204,102,0.1);
+    border: 1px solid var(--accent-dim);
+    border-radius: 6px;
+    color: var(--accent);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-take:hover {
+    background: rgba(68,204,102,0.18);
+    border-color: var(--accent);
+  }
+  .btn-take:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+
+  .btn-new {
+    padding: 12px 20px;
+    background: transparent;
+    border: 1px solid var(--accent-dim);
+    border-radius: 6px;
+    color: var(--accent);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-new:hover {
+    background: rgba(68,204,102,0.1);
+    border-color: var(--accent);
+  }
+
+  /* Thinking dots */
+  @keyframes dotPulse {
+    0%, 80%, 100% { opacity: 0.2; }
+    40% { opacity: 1; }
+  }
+  .thinking-dots span {
+    animation: dotPulse 1.4s infinite;
+    font-size: 18px;
+    letter-spacing: 2px;
+  }
+  .thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+  /* ── Chat Panel ── */
+  .chat-spacer {
+    width: 220px;
+    flex-shrink: 0;
+  }
+  .chat-panel {
+    display: none;
+    flex-direction: column;
+    width: 340px;
+    flex-shrink: 0;
+    height: 612px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .chat-panel.visible { display: flex; }
+
+  .chat-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent-dim);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    flex-shrink: 0;
+  }
+
+  .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .chat-bubble {
+    max-width: 85%;
+    padding: 8px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    line-height: 1.45;
+    word-wrap: break-word;
+    animation: fadeIn 0.2s ease;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .chat-bubble.user {
+    align-self: flex-end;
+    background: rgba(68,204,102,0.15);
+    color: var(--cream);
+    border-bottom-right-radius: 4px;
+  }
+  .chat-bubble.llm {
+    align-self: flex-start;
+    background: rgba(204,102,68,0.15);
+    color: var(--cream);
+    border-bottom-left-radius: 4px;
+  }
+  .chat-bubble.system {
+    align-self: center;
+    background: transparent;
+    color: var(--cream-dim);
+    font-size: 11px;
+    font-style: italic;
+    padding: 4px 8px;
+  }
+  .chat-bubble.llm-typing {
+    align-self: flex-start;
+    background: rgba(204,102,68,0.1);
+    color: var(--cream-dim);
+    border-bottom-left-radius: 4px;
+  }
+
+  .chat-input-row {
+    display: flex;
+    gap: 6px;
+    padding: 10px 12px;
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .chat-input {
+    flex: 1;
+    padding: 8px 10px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .chat-input:focus { border-color: var(--accent-dim); }
+  .chat-input::placeholder { color: var(--cream-dim); opacity: 0.5; }
+
+  .chat-send {
+    padding: 8px 14px;
+    background: rgba(204,102,68,0.2);
+    border: 1px solid rgba(204,102,68,0.3);
+    border-radius: 6px;
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .chat-send:hover {
+    background: rgba(204,102,68,0.3);
+    border-color: #cc6644;
+  }
+
+  @media (max-width: 1000px) {
+    .game-container { flex-direction: column; gap: 20px; }
+    .sidebar { flex-direction: row; flex-wrap: wrap; min-width: unset; width: auto !important; }
+    .sidebar > * { flex: 1; min-width: 140px; }
+    .chat-panel { width: 100%; height: 300px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="game-container">
+  <div class="sidebar">
+    <div>
+      <a href="index.html" class="back-link">&larr; Back</a>
+      <div class="game-title" style="margin-top:6px">Nim<span>Mathematical Strategy</span></div>
+    </div>
+
+    <div class="mode-panel">
+      <h3>Game Mode</h3>
+      <div class="mode-toggle">
+        <button class="mode-btn active" data-mode="1p" id="btn1P">1 Player</button>
+        <button class="mode-btn" data-mode="llm" id="btnLLM">vs LLM</button>
+        <button class="mode-btn" data-mode="2p" id="btn2P">2 Player</button>
+      </div>
+      <div class="diff-section visible" id="diffSection">
+        <div class="diff-label">Difficulty</div>
+        <div class="diff-btns">
+          <button class="diff-btn" data-diff="1" id="diffEasy">Easy</button>
+          <button class="diff-btn active" data-diff="2" id="diffMedium">Medium</button>
+          <button class="diff-btn" data-diff="3" id="diffHard">Hard</button>
+        </div>
+      </div>
+      <div class="diff-section" id="llmSection">
+        <div class="diff-label">Ollama Model</div>
+        <select id="modelSelect" class="model-select">
+          <option>Loading models...</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="turn-indicator" id="turnIndicator">
+      <div class="turn-disc p1" id="turnDisc"></div>
+      <div>
+        <div class="turn-label">Current Turn</div>
+        <div class="turn-text" id="turnText">Player 1</div>
+      </div>
+    </div>
+
+    <div class="status-msg" id="statusMsg">Select sticks from a row, then take.</div>
+
+    <button class="btn-take" id="btnTake" disabled>Take</button>
+    <button class="btn-new" id="btnNew">New Game</button>
+  </div>
+
+  <div class="board-frame">
+    <canvas id="board"></canvas>
+  </div>
+
+  <div class="chat-panel" id="chatPanel">
+    <div class="chat-header">Trash Talk</div>
+    <div class="chat-messages" id="chatMessages">
+      <div class="chat-bubble system">Chat with the LLM opponent. It bites back.</div>
+    </div>
+    <div class="chat-input-row">
+      <input type="text" class="chat-input" id="chatInput" placeholder="Talk trash..." maxlength="200" autocomplete="off">
+      <button class="chat-send" id="chatSend">Send</button>
+    </div>
+  </div>
+  <div class="chat-spacer" id="chatSpacer"></div>
+</div>
+
+<script>
+// ── Constants ──
+const ROWS_INIT = [1, 3, 5, 7];
+const CANVAS_W = 500, CANVAS_H = 500;
+const STICK_W = 6, STICK_H = 60, FLAME_R = 8;
+const STICK_GAP = 32;
+
+// ── Audio ──
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx;
+function ensureAudio() { if (!audioCtx) audioCtx = new AudioCtx(); }
+
+function playSound(type) {
+  ensureAudio();
+  const actx = audioCtx;
+  const now = actx.currentTime;
+  const g = actx.createGain();
+  g.connect(actx.destination);
+
+  if (type === 'remove') {
+    const o = actx.createOscillator();
+    o.type = 'sine'; o.frequency.setValueAtTime(800, now);
+    o.frequency.exponentialRampToValueAtTime(300, now + 0.15);
+    g.gain.setValueAtTime(0.08, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+    o.connect(g); o.start(now); o.stop(now + 0.18);
+  } else if (type === 'win') {
+    [523, 659, 784, 1047].forEach((f, i) => {
+      const o = actx.createOscillator();
+      const gg = actx.createGain();
+      o.type = 'sine'; o.frequency.value = f;
+      gg.gain.setValueAtTime(0, now + i * 0.12);
+      gg.gain.linearRampToValueAtTime(0.07, now + i * 0.12 + 0.03);
+      gg.gain.exponentialRampToValueAtTime(0.001, now + i * 0.12 + 0.3);
+      o.connect(gg); gg.connect(actx.destination);
+      o.start(now + i * 0.12); o.stop(now + i * 0.12 + 0.3);
+    });
+  } else if (type === 'lose') {
+    [400, 350, 300, 200].forEach((f, i) => {
+      const o = actx.createOscillator();
+      const gg = actx.createGain();
+      o.type = 'sawtooth'; o.frequency.value = f;
+      gg.gain.setValueAtTime(0, now + i * 0.15);
+      gg.gain.linearRampToValueAtTime(0.05, now + i * 0.15 + 0.03);
+      gg.gain.exponentialRampToValueAtTime(0.001, now + i * 0.15 + 0.25);
+      o.connect(gg); gg.connect(actx.destination);
+      o.start(now + i * 0.15); o.stop(now + i * 0.15 + 0.25);
+    });
+  }
+}
+
+// ── Canvas Setup ──
+const canvas = document.getElementById('board');
+const ctx = canvas.getContext('2d');
+canvas.width = CANVAS_W;
+canvas.height = CANVAS_H;
+canvas.style.width = CANVAS_W + 'px';
+canvas.style.height = CANVAS_H + 'px';
+
+// ── Game State ──
+let rows = [];          // current stick counts per row
+let selected = [];      // which sticks are selected (array of {row, idx})
+let selectedRow = -1;   // which row has selection (-1 = none)
+let turn = 0;           // 0 = Player 1, 1 = Player 2 / AI
+let gameOver = false;
+let winner = -1;        // 0 or 1
+let aiThinking = false;
+let hoverStick = null;  // {row, idx} or null
+
+// Fade-out animation state
+let fadeOuts = [];       // [{row, idx, alpha, startTime}]
+let pulsePhase = 0;
+
+// ── Mode & Difficulty ──
+let gameMode = '1p';
+let difficulty = 2;
+let llmModel = '';
+const AI_SIDE = 1;
+
+// ── Mode UI ──
+document.getElementById('btn1P').addEventListener('click', () => setMode('1p'));
+document.getElementById('btn2P').addEventListener('click', () => setMode('2p'));
+document.getElementById('btnLLM').addEventListener('click', () => setMode('llm'));
+document.getElementById('diffEasy').addEventListener('click', () => setDifficulty(1));
+document.getElementById('diffMedium').addEventListener('click', () => setDifficulty(2));
+document.getElementById('diffHard').addEventListener('click', () => setDifficulty(3));
+
+function setMode(m) {
+  gameMode = m;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === m));
+  document.getElementById('diffSection').classList.toggle('visible', m === '1p' || m === 'llm');
+  document.getElementById('llmSection').classList.toggle('visible', m === 'llm');
+  if (m === 'llm') loadModels();
+  showChat(m === 'llm');
+  initGame();
+}
+
+function setDifficulty(d) {
+  difficulty = d;
+  document.querySelectorAll('.diff-btn').forEach(b => b.classList.toggle('active', +b.dataset.diff === d));
+  initGame();
+}
+
+// ── Ollama Model Loading ──
+async function loadModels() {
+  const sel = document.getElementById('modelSelect');
+  try {
+    const res = await fetch('/api/models');
+    const data = await res.json();
+    const models = data.models || data;
+    sel.innerHTML = '';
+    models.forEach(m => {
+      const name = m.name || m.id || m;
+      const opt = document.createElement('option');
+      opt.value = name; opt.textContent = name;
+      sel.appendChild(opt);
+    });
+    llmModel = sel.value;
+    sel.addEventListener('change', () => { llmModel = sel.value; });
+  } catch (e) {
+    sel.innerHTML = '<option>No models found</option>';
+  }
+}
+
+// ── Stick Geometry ──
+function getStickPos(row, idx) {
+  const count = ROWS_INIT[row];
+  const rowY = 50 + row * 115;
+  const totalW = (count - 1) * STICK_GAP;
+  const startX = (CANVAS_W - totalW) / 2;
+  return { x: startX + idx * STICK_GAP, y: rowY };
+}
+
+function getStickRect(row, idx) {
+  const pos = getStickPos(row, idx);
+  return {
+    x: pos.x - STICK_W / 2 - 8,
+    y: pos.y - FLAME_R - 4,
+    w: STICK_W + 16,
+    h: STICK_H + FLAME_R + 8
+  };
+}
+
+// ── Check if stick is still alive (not taken) ──
+let aliveSticks = []; // aliveSticks[row][idx] = true/false
+
+// ── Init Game ──
+function initGame() {
+  rows = [...ROWS_INIT];
+  aliveSticks = ROWS_INIT.map(n => Array(n).fill(true));
+  selected = [];
+  selectedRow = -1;
+  turn = 0;
+  gameOver = false;
+  winner = -1;
+  aiThinking = false;
+  hoverStick = null;
+  fadeOuts = [];
+  document.getElementById('btnTake').disabled = true;
+  updateUI();
+  draw();
+}
+
+function isAlive(row, idx) {
+  return aliveSticks[row] && aliveSticks[row][idx];
+}
+
+function isSelected(row, idx) {
+  return selected.some(s => s.row === row && s.idx === idx);
+}
+
+function countAlive(row) {
+  return aliveSticks[row].filter(Boolean).length;
+}
+
+function totalAlive() {
+  return aliveSticks.reduce((sum, r) => sum + r.filter(Boolean).length, 0);
+}
+
+// ── Update UI ──
+function updateUI() {
+  const ti = document.getElementById('turnIndicator');
+  const td = document.getElementById('turnDisc');
+  const tt = document.getElementById('turnText');
+  const status = document.getElementById('statusMsg');
+
+  ti.className = 'turn-indicator' + (turn === 0 ? ' active-p1' : ' active-p2');
+  td.className = 'turn-disc ' + (turn === 0 ? 'p1' : 'p2');
+
+  const isAI = (gameMode === '1p' || gameMode === 'llm') && turn === AI_SIDE;
+  if (gameMode === '2p') {
+    tt.textContent = turn === 0 ? 'Player 1' : 'Player 2';
+  } else {
+    tt.textContent = turn === 0 ? 'Your turn' : (gameMode === 'llm' ? 'LLM thinking' : 'AI thinking');
+  }
+
+  status.className = 'status-msg';
+  if (gameOver) {
+    const loserName = gameMode === '2p'
+      ? (winner === 0 ? 'Player 1 wins!' : 'Player 2 wins!')
+      : (winner === 0 ? 'You win!' : (gameMode === 'llm' ? 'LLM wins!' : 'AI wins!'));
+    status.textContent = loserName;
+    status.className = 'status-msg winner';
+  } else if (aiThinking) {
+    status.innerHTML = '<span class="thinking-dots"><span>.</span><span>.</span><span>.</span></span>';
+    status.className = 'status-msg thinking';
+  } else if (selected.length > 0) {
+    status.textContent = `Taking ${selected.length} from row ${selectedRow + 1}. Confirm or select more.`;
+  } else {
+    status.textContent = 'Select sticks from a row, then take.';
+  }
+}
+
+// ── Drawing ──
+function draw() {
+  ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+
+  // Background
+  ctx.fillStyle = '#0a0c0a';
+  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+  // Subtle grid
+  ctx.strokeStyle = 'rgba(68,204,102,0.03)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i < CANVAS_W; i += 40) {
+    ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, CANVAS_H); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(CANVAS_W, i); ctx.stroke();
+  }
+
+  // Row labels
+  ctx.font = '600 14px "Cormorant Garamond", serif';
+  ctx.fillStyle = 'rgba(68,204,102,0.25)';
+  ctx.textAlign = 'left';
+  for (let r = 0; r < 4; r++) {
+    const pos = getStickPos(r, 0);
+    ctx.fillText(`Row ${r + 1}`, 16, pos.y + STICK_H / 2 + 4);
+  }
+
+  const now = performance.now();
+  pulsePhase = (now % 2000) / 2000 * Math.PI * 2;
+
+  // Draw alive sticks
+  for (let r = 0; r < 4; r++) {
+    for (let idx = 0; idx < ROWS_INIT[r]; idx++) {
+      if (!isAlive(r, idx)) continue;
+      const pos = getStickPos(r, idx);
+      const sel = isSelected(r, idx);
+      const hov = hoverStick && hoverStick.row === r && hoverStick.idx === idx && !sel;
+      drawStick(pos.x, pos.y, sel, hov);
+    }
+  }
+
+  // Draw fade-outs
+  fadeOuts = fadeOuts.filter(f => {
+    const elapsed = now - f.startTime;
+    const alpha = 1 - elapsed / 500;
+    if (alpha <= 0) return false;
+    const pos = getStickPos(f.row, f.idx);
+    ctx.globalAlpha = alpha;
+    drawStick(pos.x, pos.y, false, false, true);
+    ctx.globalAlpha = 1;
+    return true;
+  });
+
+  requestAnimationFrame(draw);
+}
+
+function drawStick(x, y, selected, hovered, fading) {
+  const glowIntensity = selected ? 0.6 + 0.2 * Math.sin(pulsePhase) : (hovered ? 0.35 : 0.15);
+  const stickColor = selected ? '#66ff88' : (hovered ? '#55dd77' : '#44cc66');
+  const flameColor = selected ? '#88ffaa' : '#55dd77';
+
+  // Glow
+  const gradient = ctx.createRadialGradient(x, y + STICK_H * 0.3, 0, x, y + STICK_H * 0.3, 40);
+  gradient.addColorStop(0, `rgba(68,204,102,${glowIntensity})`);
+  gradient.addColorStop(1, 'rgba(68,204,102,0)');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(x - 40, y - 20, 80, STICK_H + 40);
+
+  // Stick body
+  ctx.fillStyle = stickColor;
+  ctx.shadowColor = stickColor;
+  ctx.shadowBlur = selected ? 12 : 6;
+  const sw = selected ? STICK_W + 2 : STICK_W;
+  ctx.fillRect(x - sw / 2, y, sw, STICK_H);
+
+  // Flame on top
+  ctx.beginPath();
+  ctx.ellipse(x, y - 2, FLAME_R * (selected ? 1.3 : 1), FLAME_R * 1.5 * (selected ? 1.3 : 1), 0, 0, Math.PI * 2);
+  const flameGrad = ctx.createRadialGradient(x, y - 2, 0, x, y - 2, FLAME_R * 1.5);
+  flameGrad.addColorStop(0, selected ? '#ccffdd' : '#aaffbb');
+  flameGrad.addColorStop(0.5, flameColor);
+  flameGrad.addColorStop(1, 'rgba(68,204,102,0)');
+  ctx.fillStyle = flameGrad;
+  ctx.fill();
+
+  ctx.shadowBlur = 0;
+}
+
+// ── Canvas Interaction ──
+canvas.addEventListener('mousemove', (e) => {
+  if (gameOver || aiThinking) { hoverStick = null; return; }
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  hoverStick = hitTest(mx, my);
+  canvas.style.cursor = hoverStick ? 'pointer' : 'default';
+});
+
+canvas.addEventListener('mouseleave', () => { hoverStick = null; });
+
+canvas.addEventListener('click', (e) => {
+  if (gameOver || aiThinking) return;
+  const isAI = (gameMode !== '2p') && turn === AI_SIDE;
+  if (isAI) return;
+
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  const hit = hitTest(mx, my);
+  if (!hit) return;
+
+  const { row, idx } = hit;
+
+  // If selecting from a different row, clear selection
+  if (selectedRow !== -1 && selectedRow !== row) {
+    selected = [];
+    selectedRow = -1;
+  }
+
+  if (isSelected(row, idx)) {
+    // Deselect
+    selected = selected.filter(s => !(s.row === row && s.idx === idx));
+    if (selected.length === 0) selectedRow = -1;
+  } else {
+    // Select
+    selectedRow = row;
+    selected.push({ row, idx });
+  }
+
+  document.getElementById('btnTake').disabled = selected.length === 0;
+  updateUI();
+});
+
+function hitTest(mx, my) {
+  for (let r = 0; r < 4; r++) {
+    for (let idx = 0; idx < ROWS_INIT[r]; idx++) {
+      if (!isAlive(r, idx)) continue;
+      const rect = getStickRect(r, idx);
+      if (mx >= rect.x && mx <= rect.x + rect.w && my >= rect.y && my <= rect.y + rect.h) {
+        return { row: r, idx };
+      }
+    }
+  }
+  return null;
+}
+
+// ── Take Action ──
+document.getElementById('btnTake').addEventListener('click', () => {
+  if (selected.length === 0 || gameOver || aiThinking) return;
+  executeTake(selectedRow, selected.map(s => s.idx));
+});
+
+function executeTake(row, indices) {
+  // Remove sticks
+  indices.forEach(idx => {
+    aliveSticks[row][idx] = false;
+    fadeOuts.push({ row, idx, startTime: performance.now() });
+  });
+  rows[row] = countAlive(row);
+  selected = [];
+  selectedRow = -1;
+  document.getElementById('btnTake').disabled = true;
+
+  playSound('remove');
+
+  // Check game over - player who takes last stick LOSES (misere)
+  if (totalAlive() === 0) {
+    gameOver = true;
+    winner = turn === 0 ? 1 : 0; // current player loses (took last)
+    playSound(winner === 0 ? 'win' : 'lose');
+    updateUI();
+    draw();
+    if (gameMode === 'llm') autoTaunt();
+    return;
+  }
+
+  // Switch turn
+  turn = 1 - turn;
+  updateUI();
+  draw();
+
+  // AI turn
+  if (gameMode !== '2p' && turn === AI_SIDE) {
+    aiThinking = true;
+    updateUI();
+    setTimeout(() => {
+      doAIMove();
+      aiThinking = false;
+      updateUI();
+      draw();
+      if (gameMode === 'llm') autoTaunt();
+    }, 600 + Math.random() * 400);
+  }
+}
+
+// ── AI Logic ──
+function doAIMove() {
+  let move;
+  if (difficulty === 1) {
+    move = randomMove();
+  } else if (difficulty === 2) {
+    move = Math.random() < 0.6 ? optimalMove() : randomMove();
+  } else {
+    move = optimalMove();
+  }
+
+  if (!move) move = randomMove(); // fallback
+
+  // Execute the AI move
+  const indices = move.indices;
+  indices.forEach(idx => {
+    aliveSticks[move.row][idx] = false;
+    fadeOuts.push({ row: move.row, idx, startTime: performance.now() });
+  });
+  rows[move.row] = countAlive(move.row);
+
+  playSound('remove');
+
+  // Check game over
+  if (totalAlive() === 0) {
+    gameOver = true;
+    winner = turn === 0 ? 1 : 0;
+    const isHumanWin = winner === 0;
+    playSound(isHumanWin ? 'win' : 'lose');
+    turn = 1 - turn; // for display
+    return;
+  }
+
+  turn = 1 - turn;
+}
+
+function randomMove() {
+  // Pick a random non-empty row, take random 1..count sticks
+  const nonEmpty = [];
+  for (let r = 0; r < 4; r++) {
+    if (countAlive(r) > 0) nonEmpty.push(r);
+  }
+  if (nonEmpty.length === 0) return null;
+  const row = nonEmpty[Math.floor(Math.random() * nonEmpty.length)];
+  const alive = [];
+  for (let i = 0; i < ROWS_INIT[row]; i++) {
+    if (isAlive(row, i)) alive.push(i);
+  }
+  const count = 1 + Math.floor(Math.random() * alive.length);
+  // Shuffle and take first 'count'
+  const shuffled = alive.sort(() => Math.random() - 0.5);
+  return { row, indices: shuffled.slice(0, count) };
+}
+
+function optimalMove() {
+  // Nim-sum (XOR) strategy for misere variant
+  const aliveCounts = rows.map((_, r) => countAlive(r));
+  const nimSum = aliveCounts.reduce((a, b) => a ^ b, 0);
+
+  // Misere strategy:
+  // If all heaps are 0 or 1, take to leave an ODD number of heaps of size 1
+  // Otherwise, play normal nim (leave nim-sum = 0), but adjust endgame
+
+  const heapsGt1 = aliveCounts.filter(c => c > 1).length;
+  const heapsEq1 = aliveCounts.filter(c => c === 1).length;
+
+  if (heapsGt1 === 0) {
+    // All heaps are 0 or 1. In misere, want to leave ODD number of 1-heaps.
+    // If currently odd number of 1-heaps, we're in trouble (take 1 makes it even, bad).
+    // If even, take 1 from any 1-heap to make it odd.
+    if (heapsEq1 % 2 === 0) {
+      // Take from one 1-heap
+      for (let r = 0; r < 4; r++) {
+        if (countAlive(r) === 1) {
+          const idx = aliveSticks[r].indexOf(true);
+          return { row: r, indices: [idx] };
+        }
+      }
+    }
+    // Odd 1-heaps: losing position, just take randomly
+    return null;
+  }
+
+  if (heapsGt1 === 1) {
+    // Exactly one heap > 1. Take from it to leave odd number of 1-heaps.
+    for (let r = 0; r < 4; r++) {
+      const c = countAlive(r);
+      if (c > 1) {
+        // We want to leave either 0 or 1 from this heap
+        // After removal, total 1-heaps: heapsEq1 + (leave 1 ? 1 : 0)
+        // Want total to be ODD
+        const leaveOne = (heapsEq1 % 2 === 0) ? 1 : 0;
+        const toRemove = c - leaveOne;
+        const alive = [];
+        for (let i = 0; i < ROWS_INIT[r]; i++) {
+          if (isAlive(r, i)) alive.push(i);
+        }
+        return { row: r, indices: alive.slice(0, toRemove) };
+      }
+    }
+  }
+
+  // Multiple heaps > 1: standard nim strategy (leave nim-sum = 0)
+  if (nimSum === 0) {
+    // Losing position, play randomly
+    return null;
+  }
+
+  // Find a heap to reduce to make nim-sum 0
+  for (let r = 0; r < 4; r++) {
+    const c = countAlive(r);
+    const target = c ^ nimSum;
+    if (target < c) {
+      const toRemove = c - target;
+      const alive = [];
+      for (let i = 0; i < ROWS_INIT[r]; i++) {
+        if (isAlive(r, i)) alive.push(i);
+      }
+      return { row: r, indices: alive.slice(0, toRemove) };
+    }
+  }
+
+  return null;
+}
+
+// ── New Game ──
+document.getElementById('btnNew').addEventListener('click', () => {
+  initGame();
+});
+
+// ── Board State for Chat ──
+function boardToString() {
+  return rows.map((_, r) => `Row ${r+1}: ${countAlive(r)}/${ROWS_INIT[r]}`).join(', ');
+}
+
+function getGameStatus() {
+  if (gameOver) return winner === 0 ? 'Player wins' : 'AI wins';
+  return `Turn: ${turn === 0 ? 'Player' : 'AI'}, Sticks: ${totalAlive()}`;
+}
+
+// ── Chat ──
+const chatMessages = document.getElementById('chatMessages');
+const chatInput = document.getElementById('chatInput');
+const chatSend = document.getElementById('chatSend');
+let chatBusy = false;
+let chatSessionId = 'session-' + Date.now();
+
+function showChat(show) {
+  document.getElementById('chatPanel').classList.toggle('visible', show);
+  document.getElementById('chatSpacer').style.display = show ? 'none' : '';
+}
+
+function addChatBubble(text, cls) {
+  const div = document.createElement('div');
+  div.className = 'chat-bubble ' + cls;
+  div.textContent = text;
+  chatMessages.appendChild(div);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+  return div;
+}
+
+async function sendChat() {
+  const text = chatInput.value.trim();
+  if (!text || chatBusy) return;
+
+  chatInput.value = '';
+  addChatBubble(text, 'user');
+
+  chatBusy = true;
+  const typingBubble = addChatBubble('...', 'llm-typing');
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: text,
+        model: llmModel || 'qwen2.5-coder:14b',
+        board: boardToString(),
+        sessionId: chatSessionId,
+        gameStatus: getGameStatus(),
+        gameName: 'nim'
+      })
+    });
+    const data = await res.json();
+    typingBubble.remove();
+    addChatBubble(data.reply || '...', 'llm');
+  } catch (e) {
+    typingBubble.remove();
+    addChatBubble('*connection lost*', 'system');
+  }
+  chatBusy = false;
+}
+
+chatSend.addEventListener('click', sendChat);
+chatInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') sendChat();
+});
+
+// Auto-taunt
+let moveCount = 0;
+async function autoTaunt() {
+  if (gameMode !== 'llm' || chatBusy) return;
+  moveCount++;
+  const shouldTaunt = moveCount === 1 || gameOver || Math.random() < 0.4;
+  if (!shouldTaunt) return;
+
+  chatBusy = true;
+  const typingBubble = addChatBubble('...', 'llm-typing');
+
+  const prompts = [
+    '*just removed sticks* React with trash talk about your Nim strategy.',
+    '*just made a move* Taunt the human about their impending doom.',
+    '*just made a move* Say something cocky about the math being on your side.',
+  ];
+  if (gameOver && winner === AI_SIDE) {
+    prompts.length = 0;
+    prompts.push('*you just won Nim* Gloat mercilessly. XOR is your weapon.');
+  }
+  if (gameOver && winner !== AI_SIDE) {
+    prompts.length = 0;
+    prompts.push('*you just lost Nim* Be dramatically salty. Demand a rematch. Question the math.');
+  }
+  const tauntPrompt = prompts[Math.floor(Math.random() * prompts.length)];
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: tauntPrompt,
+        model: llmModel || 'qwen2.5-coder:14b',
+        board: boardToString(),
+        sessionId: chatSessionId,
+        gameStatus: getGameStatus(),
+        gameName: 'nim'
+      })
+    });
+    const data = await res.json();
+    typingBubble.remove();
+    addChatBubble(data.reply || '...', 'llm');
+  } catch (e) {
+    typingBubble.remove();
+  }
+  chatBusy = false;
+}
+
+// Clear chat on new game
+const origInitGame = initGame;
+initGame = function() {
+  origInitGame();
+  moveCount = 0;
+  chatSessionId = 'session-' + Date.now();
+  chatMessages.innerHTML = '<div class="chat-bubble system">Chat with the LLM opponent. It bites back.</div>';
+  fetch('/api/chat/clear', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sessionId: chatSessionId })
+  }).catch(() => {});
+};
+
+// ── Start ──
+showChat(false);
+initGame();
+</script>
+
+</body>
+</html>

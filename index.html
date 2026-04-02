@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Game Suite</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@400;500;600&display=swap');
+
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #12100e;
+    --surface: #1c1914;
+    --border: #2e2820;
+    --gold: #c9a84c;
+    --gold-dim: #8a7233;
+    --cream: #e8dcc8;
+    --cream-dim: #a89878;
+  }
+
+  html, body {
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  body {
+    background:
+      radial-gradient(ellipse at 20% 10%, rgba(140,100,40,0.05) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 90%, rgba(100,60,20,0.04) 0%, transparent 50%),
+      var(--bg);
+  }
+
+  .page {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 60px 40px 80px;
+  }
+
+  .header {
+    text-align: center;
+    margin-bottom: 60px;
+  }
+  .header h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 52px;
+    font-weight: 700;
+    color: var(--gold);
+    letter-spacing: 8px;
+    text-transform: uppercase;
+    line-height: 1;
+  }
+  .header p {
+    margin-top: 12px;
+    font-size: 14px;
+    color: var(--cream-dim);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+  }
+  .header .divider {
+    width: 60px;
+    height: 1px;
+    background: var(--gold-dim);
+    margin: 20px auto 0;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 24px;
+  }
+
+  .tile {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    color: inherit;
+  }
+  .tile:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+    border-color: rgba(255,255,255,0.1);
+  }
+  .tile:hover .tile-name {
+    color: #fff;
+  }
+
+  .tile-icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+    filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3));
+    transition: transform 0.3s ease;
+  }
+  .tile:hover .tile-icon {
+    transform: scale(1.1);
+  }
+
+  .tile-name {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    transition: color 0.3s;
+  }
+  .tile-desc {
+    font-size: 11px;
+    color: rgba(255,255,255,0.4);
+    margin-top: 4px;
+    letter-spacing: 1px;
+  }
+
+  .tile-coming {
+    opacity: 0.35;
+    pointer-events: none;
+  }
+  .tile-coming .tile-badge {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 3px 8px;
+    border-radius: 3px;
+    background: rgba(255,255,255,0.08);
+    color: rgba(255,255,255,0.4);
+  }
+
+  /* Individual tile themes */
+  .tile-draughts { background: linear-gradient(135deg, #2a1f14, #1a1410); }
+  .tile-draughts:hover { background: linear-gradient(135deg, #3a2a18, #2a1f14); }
+
+  .tile-chess { background: linear-gradient(135deg, #1a1a22, #14141c); }
+  .tile-chess:hover { background: linear-gradient(135deg, #24242e, #1a1a22); }
+
+  .tile-connect4 { background: linear-gradient(135deg, #141a2a, #0e1420); }
+  .tile-connect4:hover { background: linear-gradient(135deg, #1a2236, #141a2a); }
+
+  .tile-tictactoe { background: linear-gradient(135deg, #1a1e14, #141810); }
+  .tile-tictactoe:hover { background: linear-gradient(135deg, #222818, #1a1e14); }
+
+  .tile-othello { background: linear-gradient(135deg, #0e1a14, #0a140e); }
+  .tile-othello:hover { background: linear-gradient(135deg, #142218, #0e1a14); }
+
+  .tile-go { background: linear-gradient(135deg, #1e1a12, #18140e); }
+  .tile-go:hover { background: linear-gradient(135deg, #282218, #1e1a12); }
+
+  .tile-backgammon { background: linear-gradient(135deg, #22140e, #1a0e08); }
+  .tile-backgammon:hover { background: linear-gradient(135deg, #2e1a12, #22140e); }
+
+  .tile-battleship { background: linear-gradient(135deg, #0e1620, #0a1018); }
+  .tile-battleship:hover { background: linear-gradient(135deg, #141e2a, #0e1620); }
+
+  .tile-mancala { background: linear-gradient(135deg, #1e1610, #16100c); }
+  .tile-mancala:hover { background: linear-gradient(135deg, #281e14, #1e1610); }
+
+  .tile-mahjong { background: linear-gradient(135deg, #14181e, #0e1216); }
+  .tile-mahjong:hover { background: linear-gradient(135deg, #1a2028, #14181e); }
+
+  .tile-snakes { background: linear-gradient(135deg, #1a1422, #14101a); }
+  .tile-snakes:hover { background: linear-gradient(135deg, #221a2c, #1a1422); }
+
+  .tile-ludo { background: linear-gradient(135deg, #1e1416, #181012); }
+  .tile-ludo:hover { background: linear-gradient(135deg, #281a1e, #1e1416); }
+
+  .tile-nim { background: linear-gradient(135deg, #161a14, #101610); }
+  .tile-nim:hover { background: linear-gradient(135deg, #1e2218, #161a14); }
+
+  .footer {
+    text-align: center;
+    margin-top: 60px;
+    padding-top: 30px;
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--cream-dim);
+    opacity: 0.5;
+    letter-spacing: 2px;
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <div class="header">
+    <h1>Game Suite</h1>
+    <p>Classic board games with AI opponents</p>
+    <div class="divider"></div>
+  </div>
+
+  <div class="grid">
+    <a href="draughts.html" class="tile tile-draughts">
+      <div class="tile-icon">&#9898;</div>
+      <div class="tile-name">Draughts</div>
+      <div class="tile-desc">Checkers</div>
+    </a>
+
+    <a href="chess.html" class="tile tile-chess">
+      <div class="tile-icon">&#9812;</div>
+      <div class="tile-name">Chess</div>
+      <div class="tile-desc">The king of games</div>
+    </a>
+
+    <a href="connect4.html" class="tile tile-connect4">
+      <div class="tile-icon">&#9899;</div>
+      <div class="tile-name">Connect 4</div>
+      <div class="tile-desc">Four in a row</div>
+    </a>
+
+    <a href="tictactoe.html" class="tile tile-tictactoe">
+      <div class="tile-icon">&#10005;</div>
+      <div class="tile-name">Tic Tac Toe</div>
+      <div class="tile-desc">Noughts &amp; crosses</div>
+    </a>
+
+    <a href="othello.html" class="tile tile-othello">
+      <div class="tile-icon">&#9679;</div>
+      <div class="tile-name">Othello</div>
+      <div class="tile-desc">Reversi</div>
+    </a>
+
+    <a href="go.html" class="tile tile-go">
+      <div class="tile-icon">&#9898;</div>
+      <div class="tile-name">Go</div>
+      <div class="tile-desc">9&times;9 Baduk</div>
+    </a>
+
+    <a href="backgammon.html" class="tile tile-backgammon">
+      <div class="tile-icon">&#9860;</div>
+      <div class="tile-name">Backgammon</div>
+      <div class="tile-desc">Dice &amp; strategy</div>
+    </a>
+
+    <a href="battleship.html" class="tile tile-battleship">
+      <div class="tile-icon">&#9875;</div>
+      <div class="tile-name">Battleship</div>
+      <div class="tile-desc">Naval warfare</div>
+    </a>
+
+    <a href="mancala.html" class="tile tile-mancala">
+      <div class="tile-icon">&#9854;</div>
+      <div class="tile-name">Mancala</div>
+      <div class="tile-desc">Ancient counting game</div>
+    </a>
+
+    <a href="mahjong.html" class="tile tile-mahjong">
+      <div class="tile-icon">&#126980;</div>
+      <div class="tile-name">Mahjong</div>
+      <div class="tile-desc">Tile matching solitaire</div>
+    </a>
+
+    <a href="snakes.html" class="tile tile-snakes">
+      <div class="tile-icon">&#9858;</div>
+      <div class="tile-name">Snakes &amp; Ladders</div>
+      <div class="tile-desc">Roll the dice</div>
+    </a>
+
+    <a href="nim.html" class="tile tile-nim">
+      <div class="tile-icon">&#9647;</div>
+      <div class="tile-name">Nim</div>
+      <div class="tile-desc">Mathematical strategy</div>
+    </a>
+
+    <a href="ludo.html" class="tile tile-ludo">
+      <div class="tile-icon">&#9859;</div>
+      <div class="tile-name">Ludo</div>
+      <div class="tile-desc">Race to home</div>
+    </a>
+  </div>
+
+  <div class="footer">Powered by Ollama &middot; Local AI</div>
+</div>
+
+</body>
+</html>

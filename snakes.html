@@ -1,0 +1,1409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Snakes &amp; Ladders</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@400;500;600&display=swap');
+
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+
+  :root {
+    --bg: #12101a;
+    --surface: #1c1924;
+    --surface-2: #24202e;
+    --border: #342e42;
+    --accent: #e0a040;
+    --accent-dim: #9a7030;
+    --cream: #e8dcc8;
+    --cream-dim: #a89878;
+    --player-blue: #4488dd;
+    --player-red: #dd4444;
+    --snake-red: #c04040;
+    --snake-green: #40a060;
+    --ladder-brown: #a07030;
+  }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: var(--bg);
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    overflow: hidden;
+  }
+
+  body {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: max(20px, calc(50vh - 320px));
+    background:
+      radial-gradient(ellipse at 30% 20%, rgba(224,160,64,0.04) 0%, transparent 60%),
+      radial-gradient(ellipse at 70% 80%, rgba(100,60,140,0.04) 0%, transparent 60%),
+      var(--bg);
+  }
+
+  .game-container {
+    display: flex;
+    gap: 30px;
+    align-items: flex-start;
+    user-select: none;
+  }
+
+  .board-frame {
+    position: relative;
+    flex-shrink: 0;
+    padding: 18px;
+    background: linear-gradient(145deg, #3a2e48, #221c30, #2e2440);
+    border-radius: 8px;
+    box-shadow:
+      0 2px 4px rgba(0,0,0,0.4),
+      0 8px 24px rgba(0,0,0,0.5),
+      0 20px 60px rgba(0,0,0,0.4),
+      inset 0 1px 0 rgba(255,255,255,0.06);
+  }
+
+  .board-frame::before {
+    content: '';
+    position: absolute;
+    inset: 4px;
+    border: 1px solid rgba(224,160,64,0.12);
+    border-radius: 6px;
+    pointer-events: none;
+  }
+
+  canvas {
+    display: block;
+    border-radius: 3px;
+  }
+
+  .sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 220px;
+    flex-shrink: 0;
+  }
+
+  .back-link {
+    font-size: 12px;
+    color: var(--accent-dim);
+    text-decoration: none;
+    letter-spacing: 1px;
+    transition: color 0.2s;
+  }
+  .back-link:hover { color: var(--accent); }
+
+  .game-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    line-height: 1;
+  }
+  .game-title span {
+    display: block;
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--cream-dim);
+    letter-spacing: 6px;
+    margin-top: 4px;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  /* Mode Selector */
+  .mode-panel {
+    padding: 14px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .mode-panel h3 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent-dim);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 10px;
+  }
+  .mode-toggle {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+  .mode-btn {
+    flex: 1;
+    padding: 8px 6px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--cream-dim);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+  }
+  .mode-btn:hover {
+    border-color: var(--accent-dim);
+    color: var(--cream);
+  }
+  .mode-btn.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(224,160,64,0.08);
+  }
+  .llm-section {
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    transition: max-height 0.3s ease, opacity 0.25s ease, margin-top 0.3s ease;
+    margin-top: 0;
+  }
+  .llm-section.visible {
+    max-height: 120px;
+    opacity: 1;
+    margin-top: 10px;
+  }
+  .llm-label {
+    font-size: 11px;
+    color: var(--cream-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+  }
+  .model-select {
+    width: 100%;
+    padding: 7px 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    cursor: pointer;
+    outline: none;
+  }
+  .model-select:focus { border-color: var(--accent-dim); }
+
+  /* Turn Indicator */
+  .turn-indicator {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    transition: border-color 0.3s;
+  }
+  .turn-indicator.active-blue { border-color: var(--player-blue); }
+  .turn-indicator.active-red { border-color: var(--player-red); }
+
+  .turn-disc {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+  }
+  .turn-disc.blue { background: radial-gradient(circle at 35% 35%, #6ab0ff, #2266aa 70%); }
+  .turn-disc.red { background: radial-gradient(circle at 35% 35%, #e04848, #8b1212 70%); }
+
+  .turn-text {
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .turn-label {
+    font-size: 11px;
+    color: var(--cream-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  /* Positions Panel */
+  .pos-panel {
+    padding: 16px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .pos-panel h3 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent-dim);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+  }
+  .pos-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+  }
+  .pos-row + .pos-row { border-top: 1px solid var(--border); }
+  .pos-label { font-size: 13px; color: var(--cream-dim); }
+  .pos-value { font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 700; }
+  .pos-value.blue-val { color: var(--player-blue); }
+  .pos-value.red-val { color: var(--player-red); }
+
+  /* Roll Button */
+  .btn-roll {
+    padding: 14px 20px;
+    background: rgba(224,160,64,0.12);
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    color: var(--accent);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-roll:hover {
+    background: rgba(224,160,64,0.2);
+  }
+  .btn-roll:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  /* Status Message */
+  .status-msg {
+    padding: 14px 18px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--cream-dim);
+    line-height: 1.5;
+    height: 67px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    transition: all 0.3s;
+  }
+  .status-msg.winner {
+    border-color: var(--accent);
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .btn-new {
+    padding: 12px 20px;
+    background: transparent;
+    border: 1px solid var(--accent-dim);
+    border-radius: 6px;
+    color: var(--accent);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-new:hover {
+    background: rgba(224,160,64,0.1);
+    border-color: var(--accent);
+  }
+
+  /* Thinking dots */
+  @keyframes dotPulse {
+    0%, 80%, 100% { opacity: 0.2; }
+    40% { opacity: 1; }
+  }
+  .thinking-dots span {
+    animation: dotPulse 1.4s infinite;
+    font-size: 18px;
+    letter-spacing: 2px;
+  }
+  .thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+  /* Chat Panel */
+  .chat-spacer {
+    width: 220px;
+    flex-shrink: 0;
+  }
+  .chat-panel {
+    display: none;
+    flex-direction: column;
+    width: 340px;
+    flex-shrink: 0;
+    height: 612px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .chat-panel.visible { display: flex; }
+
+  .chat-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent-dim);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    flex-shrink: 0;
+  }
+
+  .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .chat-bubble {
+    max-width: 85%;
+    padding: 8px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    line-height: 1.45;
+    word-wrap: break-word;
+    animation: fadeIn 0.2s ease;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .chat-bubble.user {
+    align-self: flex-end;
+    background: rgba(68,136,221,0.2);
+    color: var(--cream);
+    border-bottom-right-radius: 4px;
+  }
+  .chat-bubble.llm {
+    align-self: flex-start;
+    background: rgba(221,68,68,0.15);
+    color: var(--cream);
+    border-bottom-left-radius: 4px;
+  }
+  .chat-bubble.system {
+    align-self: center;
+    background: transparent;
+    color: var(--cream-dim);
+    font-size: 11px;
+    font-style: italic;
+    padding: 4px 8px;
+  }
+  .chat-bubble.llm-typing {
+    align-self: flex-start;
+    background: rgba(221,68,68,0.1);
+    color: var(--cream-dim);
+    border-bottom-left-radius: 4px;
+  }
+
+  .chat-input-row {
+    display: flex;
+    gap: 6px;
+    padding: 10px 12px;
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .chat-input {
+    flex: 1;
+    padding: 8px 10px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .chat-input:focus { border-color: var(--accent-dim); }
+  .chat-input::placeholder { color: var(--cream-dim); opacity: 0.5; }
+
+  .chat-send {
+    padding: 8px 14px;
+    background: rgba(221,68,68,0.2);
+    border: 1px solid rgba(221,68,68,0.3);
+    border-radius: 6px;
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .chat-send:hover {
+    background: rgba(221,68,68,0.3);
+    border-color: var(--player-red);
+  }
+
+  @media (max-width: 1000px) {
+    .game-container { flex-direction: column; gap: 20px; }
+    .sidebar { flex-direction: row; flex-wrap: wrap; min-width: unset; width: auto !important; }
+    .sidebar > * { flex: 1; min-width: 140px; }
+    .chat-panel { width: 100%; height: 300px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="game-container">
+  <div class="sidebar">
+    <div>
+      <a href="index.html" class="back-link">&larr; Back</a>
+      <div class="game-title" style="margin-top:8px">Snakes<br>&amp; Ladders<span>Classic Board Game</span></div>
+    </div>
+
+    <div class="mode-panel">
+      <h3>Game Mode</h3>
+      <div class="mode-toggle">
+        <button class="mode-btn active" data-mode="1p" id="btn1P">vs CPU</button>
+        <button class="mode-btn" data-mode="llm" id="btnLLM">vs LLM</button>
+        <button class="mode-btn" data-mode="2p" id="btn2P">2 Player</button>
+      </div>
+      <div class="llm-section" id="llmSection">
+        <div class="llm-label">Ollama Model</div>
+        <select id="modelSelect" class="model-select">
+          <option>Loading models...</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="turn-indicator active-blue" id="turnIndicator">
+      <div class="turn-disc blue" id="turnDisc"></div>
+      <div>
+        <div class="turn-label">Current Turn</div>
+        <div class="turn-text" id="turnText">Player 1 rolls</div>
+      </div>
+    </div>
+
+    <div class="pos-panel">
+      <h3>Positions</h3>
+      <div class="pos-row">
+        <span class="pos-label">Player 1 <small style="opacity:0.5" id="youLabel">(you)</small></span>
+        <span class="pos-value blue-val" id="posP1">0</span>
+      </div>
+      <div class="pos-row">
+        <span class="pos-label">Player 2 <small style="opacity:0.5" id="cpuLabel">(cpu)</small></span>
+        <span class="pos-value red-val" id="posP2">0</span>
+      </div>
+    </div>
+
+    <button class="btn-roll" id="btnRoll">Roll Dice</button>
+
+    <div class="status-msg" id="statusMsg">Click Roll Dice to begin!</div>
+
+    <button class="btn-new" id="btnNew">New Game</button>
+  </div>
+
+  <div class="board-frame">
+    <canvas id="board"></canvas>
+  </div>
+
+  <div class="chat-panel" id="chatPanel">
+    <div class="chat-header">Trash Talk</div>
+    <div class="chat-messages" id="chatMessages">
+      <div class="chat-bubble system">Chat with the LLM opponent. It bites back.</div>
+    </div>
+    <div class="chat-input-row">
+      <input type="text" class="chat-input" id="chatInput" placeholder="Talk trash..." maxlength="200" autocomplete="off">
+      <button class="chat-send" id="chatSend">Send</button>
+    </div>
+  </div>
+  <div class="chat-spacer" id="chatSpacer"></div>
+</div>
+
+<script>
+// ── Board Constants ──
+const SQ = 56;
+const BOARD_PX = SQ * 10;
+const canvas = document.getElementById('board');
+const ctx = canvas.getContext('2d');
+canvas.width = BOARD_PX;
+canvas.height = BOARD_PX;
+canvas.style.width = BOARD_PX + 'px';
+canvas.style.height = BOARD_PX + 'px';
+
+// Snakes: head -> tail
+const SNAKES = { 99:41, 89:53, 76:58, 66:45, 54:31, 43:18, 27:5, 16:4 };
+// Ladders: bottom -> top
+const LADDERS = { 4:25, 13:46, 21:59, 33:49, 42:63, 50:69, 62:81, 74:92 };
+
+// Square colors (warm pastels)
+const SQUARE_COLORS = [
+  '#f5c6c6', '#f5e0a0', '#c6f5c6', '#a0d4f5',
+  '#f0b8e0', '#f5d6a0', '#b8e8c8', '#c0c8f5'
+];
+
+// ── Audio ──
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx;
+function ensureAudio() { if (!audioCtx) audioCtx = new AudioCtx(); }
+
+function playSound(type) {
+  ensureAudio();
+  const actx = audioCtx;
+  const now = actx.currentTime;
+
+  if (type === 'dice') {
+    for (let i = 0; i < 4; i++) {
+      const o = actx.createOscillator();
+      const g = actx.createGain();
+      o.type = 'square';
+      o.frequency.value = 200 + Math.random() * 400;
+      g.gain.setValueAtTime(0.04, now + i * 0.04);
+      g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.04 + 0.04);
+      o.connect(g); g.connect(actx.destination);
+      o.start(now + i * 0.04); o.stop(now + i * 0.04 + 0.05);
+    }
+  } else if (type === 'ladder') {
+    [400, 500, 630, 800].forEach((f, i) => {
+      const o = actx.createOscillator();
+      const g = actx.createGain();
+      o.type = 'sine'; o.frequency.value = f;
+      g.gain.setValueAtTime(0, now + i * 0.08);
+      g.gain.linearRampToValueAtTime(0.07, now + i * 0.08 + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.08 + 0.15);
+      o.connect(g); g.connect(actx.destination);
+      o.start(now + i * 0.08); o.stop(now + i * 0.08 + 0.15);
+    });
+  } else if (type === 'snake') {
+    [600, 480, 360, 250].forEach((f, i) => {
+      const o = actx.createOscillator();
+      const g = actx.createGain();
+      o.type = 'sawtooth'; o.frequency.value = f;
+      g.gain.setValueAtTime(0, now + i * 0.08);
+      g.gain.linearRampToValueAtTime(0.04, now + i * 0.08 + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.08 + 0.15);
+      o.connect(g); g.connect(actx.destination);
+      o.start(now + i * 0.08); o.stop(now + i * 0.08 + 0.15);
+    });
+  } else if (type === 'win') {
+    [523, 659, 784, 1047].forEach((f, i) => {
+      const o = actx.createOscillator();
+      const g = actx.createGain();
+      o.type = 'sine'; o.frequency.value = f;
+      g.gain.setValueAtTime(0, now + i * 0.12);
+      g.gain.linearRampToValueAtTime(0.08, now + i * 0.12 + 0.03);
+      g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.12 + 0.4);
+      o.connect(g); g.connect(actx.destination);
+      o.start(now + i * 0.12); o.stop(now + i * 0.12 + 0.4);
+    });
+  } else if (type === 'hop') {
+    const o = actx.createOscillator();
+    const g = actx.createGain();
+    o.type = 'sine'; o.frequency.setValueAtTime(500, now);
+    o.frequency.exponentialRampToValueAtTime(350, now + 0.05);
+    g.gain.setValueAtTime(0.05, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+    o.connect(g); g.connect(actx.destination);
+    o.start(now); o.stop(now + 0.07);
+  }
+}
+
+// ── Coordinate helpers ──
+// Convert square number (1-100) to pixel center
+function sqToPixel(sq) {
+  if (sq < 1) sq = 1;
+  if (sq > 100) sq = 100;
+  const idx = sq - 1;
+  const row = Math.floor(idx / 10);
+  const colInRow = idx % 10;
+  // Even rows (0, 2, 4...) go left-to-right, odd rows go right-to-left
+  const col = (row % 2 === 0) ? colInRow : (9 - colInRow);
+  // Row 0 is bottom of screen
+  const px = col * SQ + SQ / 2;
+  const py = (9 - row) * SQ + SQ / 2;
+  return { x: px, y: py };
+}
+
+// ── Game State ──
+let p1Pos = 0, p2Pos = 0; // 0 = off board, 1-100 on board
+let currentPlayer = 1; // 1 or 2
+let gameOver = false;
+let lastRoll = 0;
+let animating = false;
+let diceAnimating = false;
+let diceValue = 0;
+let diceAngle = 0;
+
+// ── Mode ──
+let gameMode = '1p';
+let llmModel = '';
+
+// ── Dice animation state ──
+let diceAnimFrames = 0;
+let diceAnimTotal = 20;
+let diceAnimResult = 1;
+let diceAnimCb = null;
+
+// ── Token animation state ──
+let tokenAnim = null; // { player, path: [sq,...], idx, t, onDone }
+
+// ── Drawing ──
+function drawBoard() {
+  ctx.clearRect(0, 0, BOARD_PX, BOARD_PX);
+
+  // Draw squares
+  for (let sq = 1; sq <= 100; sq++) {
+    const idx = sq - 1;
+    const row = Math.floor(idx / 10);
+    const colInRow = idx % 10;
+    const col = (row % 2 === 0) ? colInRow : (9 - colInRow);
+    const px = col * SQ;
+    const py = (9 - row) * SQ;
+
+    const colorIdx = (col + row) % SQUARE_COLORS.length;
+    ctx.fillStyle = SQUARE_COLORS[colorIdx];
+    ctx.fillRect(px, py, SQ, SQ);
+
+    // Square border
+    ctx.strokeStyle = 'rgba(0,0,0,0.08)';
+    ctx.lineWidth = 0.5;
+    ctx.strokeRect(px, py, SQ, SQ);
+
+    // Number
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.font = '600 11px "DM Sans", sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText(sq, px + 3, py + 2);
+  }
+
+  // Draw ladders
+  for (const [bottom, top] of Object.entries(LADDERS)) {
+    drawLadder(+bottom, +top);
+  }
+
+  // Draw snakes
+  for (const [head, tail] of Object.entries(SNAKES)) {
+    drawSnake(+head, +tail);
+  }
+
+  // Draw tokens (skip animated one)
+  const animPlayer = tokenAnim ? tokenAnim.player : 0;
+
+  if (p1Pos > 0 && animPlayer !== 1) drawToken(p1Pos, 1);
+  if (p2Pos > 0 && animPlayer !== 2) drawToken(p2Pos, 2);
+
+  // Draw animated token
+  if (tokenAnim) {
+    const { path, idx, t, player } = tokenAnim;
+    if (idx < path.length - 1) {
+      const from = sqToPixel(path[idx]);
+      const to = sqToPixel(path[idx + 1]);
+      const x = from.x + (to.x - from.x) * t;
+      const y = from.y + (to.y - from.y) * t - Math.sin(t * Math.PI) * 14;
+      drawTokenAt(x, y, player);
+    } else {
+      drawToken(path[path.length - 1], player);
+    }
+  }
+
+  // Draw dice
+  drawDice();
+}
+
+function drawLadder(bottom, top) {
+  const b = sqToPixel(bottom);
+  const t = sqToPixel(top);
+
+  const dx = t.x - b.x;
+  const dy = t.y - b.y;
+  const len = Math.sqrt(dx * dx + dy * dy);
+  const nx = -dy / len * 8;
+  const ny = dx / len * 8;
+
+  // Side rails
+  ctx.strokeStyle = '#8B6914';
+  ctx.lineWidth = 3;
+  ctx.lineCap = 'round';
+
+  ctx.beginPath();
+  ctx.moveTo(b.x + nx, b.y + ny);
+  ctx.lineTo(t.x + nx, t.y + ny);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(b.x - nx, b.y - ny);
+  ctx.lineTo(t.x - nx, t.y - ny);
+  ctx.stroke();
+
+  // Rungs
+  ctx.strokeStyle = '#A07820';
+  ctx.lineWidth = 2;
+  const rungs = Math.max(3, Math.floor(len / 28));
+  for (let i = 1; i <= rungs; i++) {
+    const frac = i / (rungs + 1);
+    const rx = b.x + dx * frac;
+    const ry = b.y + dy * frac;
+    ctx.beginPath();
+    ctx.moveTo(rx + nx, ry + ny);
+    ctx.lineTo(rx - nx, ry - ny);
+    ctx.stroke();
+  }
+}
+
+function drawSnake(head, tail) {
+  const h = sqToPixel(head);
+  const t = sqToPixel(tail);
+
+  const isEven = head % 2 === 0;
+  const snakeColor = isEven ? '#c04040' : '#40a060';
+  const snakeColorLight = isEven ? '#e06060' : '#60c080';
+
+  const dx = t.x - h.x;
+  const dy = t.y - h.y;
+
+  // Control points for curvy shape
+  const cp1x = h.x + dx * 0.25 + dy * 0.3;
+  const cp1y = h.y + dy * 0.25 - dx * 0.3;
+  const cp2x = h.x + dx * 0.75 - dy * 0.3;
+  const cp2y = h.y + dy * 0.75 + dx * 0.3;
+
+  // Body
+  ctx.strokeStyle = snakeColor;
+  ctx.lineWidth = 5;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(h.x, h.y);
+  ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, t.x, t.y);
+  ctx.stroke();
+
+  // Lighter center line
+  ctx.strokeStyle = snakeColorLight;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(h.x, h.y);
+  ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, t.x, t.y);
+  ctx.stroke();
+
+  // Head (circle)
+  ctx.fillStyle = snakeColor;
+  ctx.beginPath();
+  ctx.arc(h.x, h.y, 6, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Eyes
+  ctx.fillStyle = '#fff';
+  ctx.beginPath();
+  ctx.arc(h.x - 2, h.y - 2, 1.5, 0, Math.PI * 2);
+  ctx.arc(h.x + 2, h.y - 2, 1.5, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawToken(sq, player) {
+  const p = sqToPixel(sq);
+  // Offset slightly if both on same square
+  let ox = 0, oy = 0;
+  if (p1Pos === p2Pos && p1Pos > 0) {
+    ox = player === 1 ? -6 : 6;
+    oy = player === 1 ? -3 : 3;
+  }
+  drawTokenAt(p.x + ox, p.y + oy, player);
+}
+
+function drawTokenAt(x, y, player) {
+  const color = player === 1 ? '#4488dd' : '#dd4444';
+  const highlight = player === 1 ? '#6ab0ff' : '#ff6666';
+
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.4)';
+  ctx.shadowBlur = 6;
+  ctx.shadowOffsetY = 2;
+
+  ctx.beginPath();
+  ctx.arc(x, y, 12, 0, Math.PI * 2);
+  const grad = ctx.createRadialGradient(x - 3, y - 3, 2, x, y, 12);
+  grad.addColorStop(0, highlight);
+  grad.addColorStop(1, color);
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  ctx.shadowColor = 'transparent';
+  ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // Player number
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 10px "DM Sans", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(player === 1 ? 'P1' : 'P2', x, y);
+
+  ctx.restore();
+}
+
+function drawDice() {
+  const dx = BOARD_PX / 2;
+  const dy = BOARD_PX / 2;
+  const size = 44;
+
+  if (diceAnimating) {
+    // Animated rolling
+    ctx.save();
+    ctx.translate(dx, dy);
+    diceAngle += 0.3;
+    ctx.rotate(diceAngle);
+
+    ctx.fillStyle = '#fff';
+    ctx.shadowColor = 'rgba(0,0,0,0.5)';
+    ctx.shadowBlur = 12;
+    roundRect(ctx, -size/2, -size/2, size, size, 6);
+    ctx.fill();
+    ctx.shadowColor = 'transparent';
+
+    // Random face during animation
+    const rndFace = Math.floor(Math.random() * 6) + 1;
+    drawDicePips(-size/2, -size/2, size, rndFace);
+
+    ctx.restore();
+    return;
+  }
+
+  if (diceValue > 0) {
+    ctx.save();
+    ctx.translate(dx, dy);
+
+    ctx.fillStyle = '#fff';
+    ctx.shadowColor = 'rgba(0,0,0,0.4)';
+    ctx.shadowBlur = 10;
+    roundRect(ctx, -size/2, -size/2, size, size, 6);
+    ctx.fill();
+    ctx.shadowColor = 'transparent';
+
+    ctx.strokeStyle = 'rgba(0,0,0,0.1)';
+    ctx.lineWidth = 1;
+    roundRect(ctx, -size/2, -size/2, size, size, 6);
+    ctx.stroke();
+
+    drawDicePips(-size/2, -size/2, size, diceValue);
+
+    ctx.restore();
+  }
+}
+
+function drawDicePips(x, y, size, val) {
+  ctx.fillStyle = '#222';
+  const cx = x + size / 2;
+  const cy = y + size / 2;
+  const off = size * 0.28;
+  const r = 3.5;
+
+  const positions = {
+    1: [[cx, cy]],
+    2: [[cx - off, cy - off], [cx + off, cy + off]],
+    3: [[cx - off, cy - off], [cx, cy], [cx + off, cy + off]],
+    4: [[cx - off, cy - off], [cx + off, cy - off], [cx - off, cy + off], [cx + off, cy + off]],
+    5: [[cx - off, cy - off], [cx + off, cy - off], [cx, cy], [cx - off, cy + off], [cx + off, cy + off]],
+    6: [[cx - off, cy - off], [cx + off, cy - off], [cx - off, cy], [cx + off, cy], [cx - off, cy + off], [cx + off, cy + off]]
+  };
+
+  (positions[val] || []).forEach(([px, py]) => {
+    ctx.beginPath();
+    ctx.arc(px, py, r, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+// ── Dice Roll Animation ──
+function animateDice(result, cb) {
+  diceAnimating = true;
+  diceAnimFrames = 0;
+  diceAnimTotal = 18;
+  diceAnimResult = result;
+  diceAnimCb = cb;
+  playSound('dice');
+  requestAnimationFrame(diceAnimLoop);
+}
+
+function diceAnimLoop() {
+  diceAnimFrames++;
+  drawBoard();
+  if (diceAnimFrames < diceAnimTotal) {
+    requestAnimationFrame(diceAnimLoop);
+  } else {
+    diceAnimating = false;
+    diceAngle = 0;
+    diceValue = diceAnimResult;
+    drawBoard();
+    if (diceAnimCb) diceAnimCb();
+  }
+}
+
+// ── Token Movement Animation ──
+function animateToken(player, fromSq, toSq, cb) {
+  if (fromSq === toSq) { if (cb) cb(); return; }
+
+  // Build path of squares
+  const path = [];
+  const start = Math.max(1, fromSq);
+  if (toSq > start) {
+    for (let s = start; s <= toSq; s++) path.push(s);
+  } else {
+    for (let s = start; s >= toSq; s--) path.push(s);
+  }
+
+  animating = true;
+  tokenAnim = { player, path, idx: 0, t: 0, onDone: cb };
+  requestAnimationFrame(tokenAnimLoop);
+}
+
+function tokenAnimLoop() {
+  if (!tokenAnim) return;
+
+  tokenAnim.t += 0.12;
+  if (tokenAnim.t >= 1) {
+    tokenAnim.t = 0;
+    tokenAnim.idx++;
+    if (tokenAnim.idx < tokenAnim.path.length - 1) {
+      playSound('hop');
+    }
+  }
+
+  drawBoard();
+
+  if (tokenAnim.idx >= tokenAnim.path.length - 1) {
+    const done = tokenAnim.onDone;
+    tokenAnim = null;
+    animating = false;
+    if (done) done();
+  } else {
+    requestAnimationFrame(tokenAnimLoop);
+  }
+}
+
+// ── Game Logic ──
+function getPos(player) { return player === 1 ? p1Pos : p2Pos; }
+function setPos(player, val) {
+  if (player === 1) p1Pos = val; else p2Pos = val;
+  document.getElementById('posP1').textContent = p1Pos;
+  document.getElementById('posP2').textContent = p2Pos;
+}
+
+function initGame() {
+  p1Pos = 0; p2Pos = 0;
+  currentPlayer = 1;
+  gameOver = false;
+  lastRoll = 0;
+  diceValue = 0;
+  animating = false;
+  tokenAnim = null;
+  diceAnimating = false;
+
+  document.getElementById('posP1').textContent = '0';
+  document.getElementById('posP2').textContent = '0';
+  updateTurnUI();
+  setStatus('Click Roll Dice to begin!');
+  document.getElementById('statusMsg').classList.remove('winner');
+  document.getElementById('btnRoll').disabled = false;
+
+  drawBoard();
+}
+
+function updateTurnUI() {
+  const ind = document.getElementById('turnIndicator');
+  const disc = document.getElementById('turnDisc');
+  const text = document.getElementById('turnText');
+
+  ind.className = 'turn-indicator ' + (currentPlayer === 1 ? 'active-blue' : 'active-red');
+  disc.className = 'turn-disc ' + (currentPlayer === 1 ? 'blue' : 'red');
+
+  const playerName = getPlayerName(currentPlayer);
+  text.textContent = playerName + ' rolls';
+}
+
+function getPlayerName(p) {
+  if (gameMode === '2p') return p === 1 ? 'Player 1' : 'Player 2';
+  return p === 1 ? 'You' : (gameMode === 'llm' ? 'LLM' : 'CPU');
+}
+
+function setStatus(msg) {
+  document.getElementById('statusMsg').textContent = msg;
+}
+
+function rollDice() {
+  return Math.floor(Math.random() * 6) + 1;
+}
+
+function doTurn() {
+  if (gameOver || animating || diceAnimating) return;
+
+  const btn = document.getElementById('btnRoll');
+  btn.disabled = true;
+
+  const roll = rollDice();
+  lastRoll = roll;
+
+  animateDice(roll, () => {
+    const pos = getPos(currentPlayer);
+    const playerName = getPlayerName(currentPlayer);
+    let newPos = pos + roll;
+
+    if (pos === 0) {
+      // Enter the board
+      newPos = roll;
+    }
+
+    if (newPos > 100) {
+      // Overshoot: bounce back
+      const overshoot = newPos - 100;
+      newPos = 100 - overshoot;
+      setStatus(playerName + ' rolled ' + roll + ' - overshoots! Bounces back to ' + newPos + '.');
+    } else if (newPos === 100) {
+      setStatus(playerName + ' rolled ' + roll + ' and reaches 100!');
+    } else {
+      setStatus(playerName + ' rolled ' + roll + '. Moving to ' + newPos + '...');
+    }
+
+    const startPos = pos === 0 ? 0 : pos;
+    const walkTarget = newPos;
+
+    // Animate walk to initial position
+    if (startPos === 0) {
+      // Start from off-board, just animate to new pos
+      setPos(currentPlayer, newPos);
+      animateToken(currentPlayer, 1, newPos, () => afterLand(newPos, playerName, roll));
+    } else {
+      animateToken(currentPlayer, startPos, walkTarget, () => {
+        setPos(currentPlayer, walkTarget);
+        afterLand(walkTarget, playerName, roll);
+      });
+    }
+  });
+}
+
+function afterLand(pos, playerName, roll) {
+  // Check for ladder
+  if (LADDERS[pos]) {
+    const dest = LADDERS[pos];
+    setStatus(playerName + ' landed on ladder at ' + pos + '! Climbing to ' + dest + '!');
+    playSound('ladder');
+    setTimeout(() => {
+      animateToken(currentPlayer, pos, dest, () => {
+        setPos(currentPlayer, dest);
+        checkSnakeOrLadderChat('ladder', pos, dest);
+        checkWin(playerName);
+      });
+    }, 300);
+    return;
+  }
+
+  // Check for snake
+  if (SNAKES[pos]) {
+    const dest = SNAKES[pos];
+    setStatus(playerName + ' landed on snake at ' + pos + '! Sliding down to ' + dest + '!');
+    playSound('snake');
+    setTimeout(() => {
+      animateToken(currentPlayer, pos, dest, () => {
+        setPos(currentPlayer, dest);
+        checkSnakeOrLadderChat('snake', pos, dest);
+        checkWin(playerName);
+      });
+    }, 300);
+    return;
+  }
+
+  setPos(currentPlayer, pos);
+  checkLeadChat();
+  checkWin(playerName);
+}
+
+function checkWin(playerName) {
+  const pos = getPos(currentPlayer);
+  if (pos === 100) {
+    gameOver = true;
+    setStatus(playerName + ' wins! Reached 100!');
+    document.getElementById('statusMsg').classList.add('winner');
+    playSound('win');
+    drawBoard();
+    autoTaunt();
+    return;
+  }
+
+  // Next turn
+  endTurn();
+}
+
+function endTurn() {
+  currentPlayer = currentPlayer === 1 ? 2 : 1;
+  updateTurnUI();
+  drawBoard();
+
+  const isAI = (gameMode === '1p' || gameMode === 'llm') && currentPlayer === 2;
+  if (isAI && !gameOver) {
+    document.getElementById('btnRoll').disabled = true;
+    setTimeout(() => doTurn(), 800);
+  } else {
+    document.getElementById('btnRoll').disabled = gameOver;
+  }
+}
+
+// ── Mode & UI ──
+document.getElementById('btn1P').addEventListener('click', () => setMode('1p'));
+document.getElementById('btn2P').addEventListener('click', () => setMode('2p'));
+document.getElementById('btnLLM').addEventListener('click', () => setMode('llm'));
+document.getElementById('btnRoll').addEventListener('click', doTurn);
+document.getElementById('btnNew').addEventListener('click', () => {
+  initGame();
+  resetChat();
+});
+
+function setMode(m) {
+  gameMode = m;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === m));
+  document.getElementById('llmSection').classList.toggle('visible', m === 'llm');
+
+  const isSingle = m === '1p' || m === 'llm';
+  document.getElementById('youLabel').style.display = isSingle ? '' : 'none';
+  const cpuLabel = document.getElementById('cpuLabel');
+  cpuLabel.style.display = isSingle ? '' : 'none';
+  cpuLabel.textContent = m === 'llm' ? '(llm)' : '(cpu)';
+
+  showChat(m === 'llm');
+  if (m === 'llm') loadModels();
+  initGame();
+}
+
+// ── Ollama Model Loading ──
+async function loadModels() {
+  const sel = document.getElementById('modelSelect');
+  try {
+    const res = await fetch('/api/models');
+    const data = await res.json();
+    if (data.models && data.models.length > 0) {
+      sel.innerHTML = '';
+      data.models.forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        sel.appendChild(opt);
+      });
+      const preferred = data.models.find(m => m.includes('coder:14b')) || data.models[0];
+      sel.value = preferred;
+      llmModel = preferred;
+    }
+  } catch (e) {
+    sel.innerHTML = '<option>Connection error</option>';
+  }
+}
+document.getElementById('modelSelect').addEventListener('change', (e) => {
+  llmModel = e.target.value;
+});
+
+// ── Chat ──
+const chatPanel = document.getElementById('chatPanel');
+const chatMessages = document.getElementById('chatMessages');
+const chatInput = document.getElementById('chatInput');
+const chatSend = document.getElementById('chatSend');
+let chatSessionId = 'snl-session-' + Date.now();
+let chatBusy = false;
+
+function showChat(visible) {
+  chatPanel.classList.toggle('visible', visible);
+  document.getElementById('chatSpacer').style.display = visible ? 'none' : 'block';
+}
+
+function addChatBubble(text, type) {
+  const bubble = document.createElement('div');
+  bubble.className = 'chat-bubble ' + type;
+  bubble.textContent = text;
+  chatMessages.appendChild(bubble);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+  return bubble;
+}
+
+function getBoardState() {
+  return `Player 1 (human, blue): square ${p1Pos}, Player 2 (you, red): square ${p2Pos}. ` +
+    `Last dice roll: ${lastRoll}. ` +
+    Object.entries(LADDERS).map(([b,t]) => `Ladder ${b}->${t}`).join(', ') + '. ' +
+    Object.entries(SNAKES).map(([h,t]) => `Snake ${h}->${t}`).join(', ') + '.';
+}
+
+function getGameStatus() {
+  let status = `Snakes & Ladders. Player 1 (human) is on square ${p1Pos}. Player 2 (you, LLM) is on square ${p2Pos}. `;
+  if (p1Pos > p2Pos) status += `The human is AHEAD by ${p1Pos - p2Pos} squares! `;
+  else if (p2Pos > p1Pos) status += `You are AHEAD by ${p2Pos - p1Pos} squares! `;
+  else status += `You are TIED! `;
+  if (gameOver) {
+    const winner = getPos(currentPlayer) === 100 ? currentPlayer : (currentPlayer === 1 ? 2 : 1);
+    if (winner === 2) status += 'GAME OVER - YOU (Player 2) WON!';
+    else status += 'GAME OVER - YOU (Player 2) LOST!';
+  } else {
+    status += 'Game in progress.';
+  }
+  return status;
+}
+
+async function sendChat() {
+  const text = chatInput.value.trim();
+  if (!text || chatBusy) return;
+
+  chatInput.value = '';
+  addChatBubble(text, 'user');
+
+  chatBusy = true;
+  const typingBubble = addChatBubble('...', 'llm-typing');
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: text,
+        model: llmModel || 'qwen2.5-coder:14b',
+        board: getBoardState(),
+        sessionId: chatSessionId,
+        gameStatus: getGameStatus(),
+        gameName: 'snakes and ladders'
+      })
+    });
+    const data = await res.json();
+    typingBubble.remove();
+    addChatBubble(data.reply || '...', 'llm');
+  } catch (e) {
+    typingBubble.remove();
+    addChatBubble('*connection lost*', 'system');
+  }
+  chatBusy = false;
+}
+
+chatSend.addEventListener('click', sendChat);
+chatInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') sendChat();
+});
+
+// ── Auto-taunt on events ──
+let lastLeader = 0; // 0=tied, 1=p1 ahead, 2=p2 ahead
+
+function checkSnakeOrLadderChat(type, from, to) {
+  if (gameMode !== 'llm' || chatBusy) return;
+
+  let prompt;
+  if (type === 'snake' && currentPlayer === 1) {
+    prompt = `*The human just landed on a snake at ${from} and slid down to ${to}!* Mock them mercilessly for their bad luck.`;
+  } else if (type === 'snake' && currentPlayer === 2) {
+    prompt = `*You just landed on a snake at ${from} and slid down to ${to}!* Be dramatically upset and salty about your terrible luck.`;
+  } else if (type === 'ladder' && currentPlayer === 1) {
+    prompt = `*The human just landed on a ladder at ${from} and climbed to ${to}!* Be jealous and salty about their good luck.`;
+  } else if (type === 'ladder' && currentPlayer === 2) {
+    prompt = `*You just landed on a ladder at ${from} and climbed to ${to}!* Celebrate and gloat about your amazing luck.`;
+  }
+
+  if (prompt) sendAutoChat(prompt);
+}
+
+function checkLeadChat() {
+  if (gameMode !== 'llm' || chatBusy) return;
+
+  const newLeader = p1Pos > p2Pos ? 1 : (p2Pos > p1Pos ? 2 : 0);
+  if (newLeader !== lastLeader && lastLeader !== 0) {
+    if (newLeader === 2) {
+      sendAutoChat('*You just took the lead!* Celebrate and taunt the human about overtaking them.');
+    } else if (newLeader === 1) {
+      sendAutoChat('*The human just took the lead!* Be salty and threaten a comeback.');
+    }
+  }
+  lastLeader = newLeader;
+}
+
+let moveCount = 0;
+async function autoTaunt() {
+  if (gameMode !== 'llm' || chatBusy) return;
+  moveCount++;
+
+  if (gameOver) {
+    const winner = getPos(currentPlayer) === 100 ? currentPlayer : (currentPlayer === 1 ? 2 : 1);
+    if (winner === 2) {
+      sendAutoChat('*You just won the game!* Gloat mercilessly. You crushed them at snakes and ladders.');
+    } else {
+      sendAutoChat('*You just lost the game!* Be dramatically salty. Blame the dice. Demand a rematch.');
+    }
+    return;
+  }
+
+  // Random taunts ~30% of the time
+  if (currentPlayer === 1 && moveCount > 1 && Math.random() < 0.3) {
+    const prompts = [
+      '*just rolled the dice* React to the current game state with trash talk.',
+      '*watching the human take their turn* Say something snarky.',
+      '*the game continues* Make a witty comment about snakes and ladders.',
+    ];
+    sendAutoChat(prompts[Math.floor(Math.random() * prompts.length)]);
+  }
+}
+
+async function sendAutoChat(prompt) {
+  if (chatBusy) return;
+  chatBusy = true;
+  const typingBubble = addChatBubble('...', 'llm-typing');
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: prompt,
+        model: llmModel || 'qwen2.5-coder:14b',
+        board: getBoardState(),
+        sessionId: chatSessionId,
+        gameStatus: getGameStatus(),
+        gameName: 'snakes and ladders'
+      })
+    });
+    const data = await res.json();
+    typingBubble.remove();
+    addChatBubble(data.reply || '...', 'llm');
+  } catch (e) {
+    typingBubble.remove();
+  }
+  chatBusy = false;
+}
+
+function resetChat() {
+  moveCount = 0;
+  lastLeader = 0;
+  chatSessionId = 'snl-session-' + Date.now();
+  chatMessages.innerHTML = '<div class="chat-bubble system">Chat with the LLM opponent. It bites back.</div>';
+  fetch('/api/chat/clear', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sessionId: chatSessionId })
+  }).catch(() => {});
+}
+
+// ── Start ──
+initGame();
+</script>
+
+</body>
+</html>

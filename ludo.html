@@ -1,0 +1,2014 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ludo</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@400;500;600&display=swap');
+
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+
+  :root {
+    --bg: #100e14;
+    --surface: #1a1726;
+    --surface-2: #221e30;
+    --border: #2e2944;
+    --accent: #5588dd;
+    --accent-dim: #3a5f9a;
+    --cream: #e0dde8;
+    --cream-dim: #8a87a0;
+    --blue: #2266cc;
+    --blue-light: #4488ee;
+    --red: #cc2222;
+    --red-light: #ee4444;
+    --green: #22aa44;
+    --yellow: #ccaa00;
+  }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: var(--bg);
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    overflow: hidden;
+  }
+
+  body {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: max(10px, calc(50vh - 320px));
+    background:
+      radial-gradient(ellipse at 30% 20%, rgba(85,136,221,0.05) 0%, transparent 60%),
+      radial-gradient(ellipse at 70% 80%, rgba(60,40,120,0.04) 0%, transparent 60%),
+      var(--bg);
+  }
+
+  .game-container {
+    display: flex;
+    gap: 30px;
+    align-items: flex-start;
+    user-select: none;
+  }
+
+  .board-frame {
+    position: relative;
+    flex-shrink: 0;
+    padding: 14px;
+    background: linear-gradient(145deg, #2a2540, #1a1630, #252040);
+    border-radius: 10px;
+    box-shadow:
+      0 2px 4px rgba(0,0,0,0.4),
+      0 8px 24px rgba(0,0,0,0.5),
+      0 20px 60px rgba(0,0,0,0.4),
+      inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+
+  .board-frame::before {
+    content: '';
+    position: absolute;
+    inset: 4px;
+    border: 1px solid rgba(85,136,221,0.12);
+    border-radius: 8px;
+    pointer-events: none;
+  }
+
+  canvas {
+    display: block;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  .sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: 220px;
+    flex-shrink: 0;
+  }
+
+  .back-link {
+    font-size: 12px;
+    color: var(--cream-dim);
+    text-decoration: none;
+    letter-spacing: 1px;
+    transition: color 0.2s;
+  }
+  .back-link:hover { color: var(--cream); }
+
+  .game-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    line-height: 1;
+  }
+  .game-title span {
+    display: block;
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--cream-dim);
+    letter-spacing: 6px;
+    margin-top: 4px;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .mode-panel {
+    padding: 14px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .mode-panel h3 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent-dim);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 10px;
+  }
+  .mode-toggle {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+  .mode-btn {
+    flex: 1;
+    padding: 8px 6px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--cream-dim);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+  }
+  .mode-btn:hover {
+    border-color: var(--accent-dim);
+    color: var(--cream);
+  }
+  .mode-btn.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(85,136,221,0.08);
+  }
+  .diff-section {
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    transition: max-height 0.3s ease, opacity 0.25s ease, margin-top 0.3s ease;
+    margin-top: 0;
+  }
+  .diff-section.visible {
+    max-height: 120px;
+    opacity: 1;
+    margin-top: 10px;
+  }
+  .diff-label {
+    font-size: 11px;
+    color: var(--cream-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+  }
+  .diff-btns {
+    display: flex;
+    gap: 6px;
+  }
+  .diff-btn {
+    flex: 1;
+    padding: 7px 4px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--cream-dim);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+  }
+  .diff-btn:hover {
+    border-color: var(--accent-dim);
+    color: var(--cream);
+  }
+  .diff-btn.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(85,136,221,0.08);
+  }
+
+  .model-select {
+    width: 100%;
+    padding: 7px 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    cursor: pointer;
+    outline: none;
+  }
+  .model-select:focus {
+    border-color: var(--accent-dim);
+  }
+
+  .turn-indicator {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    transition: border-color 0.3s;
+  }
+  .turn-indicator.active-blue { border-color: var(--blue-light); }
+  .turn-indicator.active-red { border-color: var(--red-light); }
+
+  .turn-disc {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+  }
+  .turn-disc.blue { background: radial-gradient(circle at 35% 35%, #5599ff, #1144aa 70%); }
+  .turn-disc.red { background: radial-gradient(circle at 35% 35%, #ff5555, #aa1111 70%); }
+
+  .turn-text {
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .turn-label {
+    font-size: 11px;
+    color: var(--cream-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  /* Dice & Roll Button */
+  .dice-panel {
+    padding: 14px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    text-align: center;
+  }
+  .dice-panel h3 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent-dim);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 10px;
+  }
+  .dice-display {
+    width: 64px; height: 64px;
+    margin: 0 auto 10px;
+    background: #f0ece4;
+    border-radius: 10px;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    transition: transform 0.1s;
+  }
+  .dice-display.rolling {
+    animation: diceShake 0.1s infinite;
+  }
+  @keyframes diceShake {
+    0% { transform: rotate(-5deg) scale(1.05); }
+    25% { transform: rotate(5deg) scale(0.95); }
+    50% { transform: rotate(-3deg) scale(1.02); }
+    75% { transform: rotate(3deg) scale(0.98); }
+    100% { transform: rotate(0deg) scale(1); }
+  }
+  .dice-canvas {
+    width: 52px; height: 52px;
+  }
+  .btn-roll {
+    padding: 10px 24px;
+    background: rgba(85,136,221,0.15);
+    border: 1px solid var(--accent-dim);
+    border-radius: 6px;
+    color: var(--accent);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    width: 100%;
+  }
+  .btn-roll:hover:not(:disabled) {
+    background: rgba(85,136,221,0.25);
+    border-color: var(--accent);
+  }
+  .btn-roll:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+
+  /* Piece Status */
+  .piece-status {
+    padding: 14px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .piece-status h3 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent-dim);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 10px;
+  }
+  .piece-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 0;
+  }
+  .piece-row + .piece-row { border-top: 1px solid var(--border); }
+  .piece-row-label { font-size: 12px; color: var(--cream-dim); }
+  .piece-pips {
+    display: flex;
+    gap: 4px;
+  }
+  .piece-pip {
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    border: 2px solid;
+    font-size: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+  }
+  .piece-pip.blue { border-color: var(--blue); color: var(--blue); }
+  .piece-pip.blue.home { background: var(--blue); color: #fff; }
+  .piece-pip.red { border-color: var(--red); color: var(--red); }
+  .piece-pip.red.home { background: var(--red); color: #fff; }
+
+  .status-msg {
+    padding: 14px 18px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--cream-dim);
+    line-height: 1.5;
+    height: 67px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    transition: all 0.3s;
+  }
+  .status-msg.winner {
+    border-color: var(--accent);
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .status-msg.thinking {
+    border-color: var(--red-light);
+    color: var(--cream-dim);
+  }
+
+  .btn-new {
+    padding: 12px 20px;
+    background: transparent;
+    border: 1px solid var(--accent-dim);
+    border-radius: 6px;
+    color: var(--accent);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-new:hover {
+    background: rgba(85,136,221,0.1);
+    border-color: var(--accent);
+  }
+
+  @keyframes dotPulse {
+    0%, 80%, 100% { opacity: 0.2; }
+    40% { opacity: 1; }
+  }
+  .thinking-dots span {
+    animation: dotPulse 1.4s infinite;
+    font-size: 18px;
+    letter-spacing: 2px;
+  }
+  .thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+  /* Chat Panel */
+  .chat-spacer {
+    width: 220px;
+    flex-shrink: 0;
+  }
+  .chat-panel {
+    display: none;
+    flex-direction: column;
+    width: 340px;
+    flex-shrink: 0;
+    height: 620px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .chat-panel.visible { display: flex; }
+
+  .chat-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent-dim);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    flex-shrink: 0;
+  }
+
+  .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .chat-bubble {
+    max-width: 85%;
+    padding: 8px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    line-height: 1.45;
+    word-wrap: break-word;
+    animation: fadeIn 0.2s ease;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .chat-bubble.user {
+    align-self: flex-end;
+    background: rgba(85,136,221,0.15);
+    color: var(--cream);
+    border-bottom-right-radius: 4px;
+  }
+  .chat-bubble.llm {
+    align-self: flex-start;
+    background: rgba(204,34,34,0.15);
+    color: var(--cream);
+    border-bottom-left-radius: 4px;
+  }
+  .chat-bubble.system {
+    align-self: center;
+    background: transparent;
+    color: var(--cream-dim);
+    font-size: 11px;
+    font-style: italic;
+    padding: 4px 8px;
+  }
+  .chat-bubble.llm-typing {
+    align-self: flex-start;
+    background: rgba(204,34,34,0.1);
+    color: var(--cream-dim);
+    border-bottom-left-radius: 4px;
+  }
+
+  .chat-input-row {
+    display: flex;
+    gap: 6px;
+    padding: 10px 12px;
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .chat-input {
+    flex: 1;
+    padding: 8px 10px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .chat-input:focus { border-color: var(--accent-dim); }
+  .chat-input::placeholder { color: var(--cream-dim); opacity: 0.5; }
+
+  .chat-send {
+    padding: 8px 14px;
+    background: rgba(204,34,34,0.2);
+    border: 1px solid rgba(204,34,34,0.3);
+    border-radius: 6px;
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .chat-send:hover {
+    background: rgba(204,34,34,0.3);
+    border-color: var(--red-light);
+  }
+
+  @media (max-width: 1000px) {
+    .game-container { flex-direction: column; gap: 20px; }
+    .sidebar { flex-direction: row; flex-wrap: wrap; min-width: unset; width: auto !important; }
+    .sidebar > * { flex: 1; min-width: 140px; }
+    .chat-panel { width: 100%; height: 300px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="game-container">
+  <div class="sidebar">
+    <a href="index.html" class="back-link">&larr; Back</a>
+    <div class="game-title">Ludo<span>Classic Board Game</span></div>
+
+    <div class="mode-panel">
+      <h3>Game Mode</h3>
+      <div class="mode-toggle">
+        <button class="mode-btn active" data-mode="1p" id="btn1P">1 Player</button>
+        <button class="mode-btn" data-mode="llm" id="btnLLM">vs LLM</button>
+        <button class="mode-btn" data-mode="2p" id="btn2P">2 Player</button>
+      </div>
+      <div class="diff-section visible" id="diffSection">
+        <div class="diff-label">Difficulty</div>
+        <div class="diff-btns">
+          <button class="diff-btn" data-diff="1" id="diffEasy">Easy</button>
+          <button class="diff-btn active" data-diff="2" id="diffMedium">Medium</button>
+          <button class="diff-btn" data-diff="3" id="diffHard">Hard</button>
+        </div>
+      </div>
+      <div class="diff-section" id="llmSection">
+        <div class="diff-label">Ollama Model</div>
+        <select id="modelSelect" class="model-select">
+          <option>Loading models...</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="turn-indicator" id="turnIndicator">
+      <div class="turn-disc blue" id="turnDisc"></div>
+      <div>
+        <div class="turn-label">Current Turn</div>
+        <div class="turn-text" id="turnText">Blue rolls</div>
+      </div>
+    </div>
+
+    <div class="dice-panel">
+      <h3>Dice</h3>
+      <div class="dice-display" id="diceDisplay">
+        <canvas class="dice-canvas" id="diceCanvas" width="52" height="52"></canvas>
+      </div>
+      <button class="btn-roll" id="btnRoll">Roll Dice</button>
+    </div>
+
+    <div class="piece-status" id="pieceStatus">
+      <h3>Pieces Home</h3>
+      <div class="piece-row">
+        <span class="piece-row-label">Blue <small style="opacity:0.5" id="youLabel">(you)</small></span>
+        <div class="piece-pips" id="bluePips"></div>
+      </div>
+      <div class="piece-row">
+        <span class="piece-row-label">Red <small style="opacity:0.5" id="cpuLabel">(cpu)</small></span>
+        <div class="piece-pips" id="redPips"></div>
+      </div>
+    </div>
+
+    <div class="status-msg" id="statusMsg">Roll the dice to begin.</div>
+
+    <button class="btn-new" id="btnNew">New Game</button>
+  </div>
+
+  <div class="board-frame">
+    <canvas id="board" width="560" height="560"></canvas>
+  </div>
+
+  <div class="chat-panel" id="chatPanel">
+    <div class="chat-header">Trash Talk</div>
+    <div class="chat-messages" id="chatMessages">
+      <div class="chat-bubble system">Chat with the LLM opponent. It bites back.</div>
+    </div>
+    <div class="chat-input-row">
+      <input type="text" class="chat-input" id="chatInput" placeholder="Talk trash..." maxlength="200" autocomplete="off">
+      <button class="chat-send" id="chatSend">Send</button>
+    </div>
+  </div>
+  <div class="chat-spacer" id="chatSpacer"></div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// ── LUDO GAME ──
+// ══════════════════════════════════════════════════════════════
+
+const BLUE = 0, RED = 1;
+const CELL = 560 / 15; // ~37.33px per cell in a 15x15 grid
+const BOARD_PX = 560;
+
+// ── Audio ──
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx;
+function ensureAudio() { if (!audioCtx) audioCtx = new AudioCtx(); }
+
+function playSound(type) {
+  ensureAudio();
+  const actx = audioCtx, now = actx.currentTime;
+  const g = actx.createGain();
+  g.connect(actx.destination);
+
+  if (type === 'roll') {
+    for (let i = 0; i < 6; i++) {
+      const o = actx.createOscillator();
+      const gg = actx.createGain();
+      o.type = 'square';
+      o.frequency.setValueAtTime(200 + Math.random() * 400, now + i * 0.04);
+      gg.gain.setValueAtTime(0.04, now + i * 0.04);
+      gg.gain.exponentialRampToValueAtTime(0.001, now + i * 0.04 + 0.04);
+      o.connect(gg); gg.connect(actx.destination);
+      o.start(now + i * 0.04); o.stop(now + i * 0.04 + 0.05);
+    }
+  } else if (type === 'move') {
+    const o = actx.createOscillator();
+    o.type = 'sine'; o.frequency.setValueAtTime(500, now);
+    o.frequency.exponentialRampToValueAtTime(350, now + 0.08);
+    g.gain.setValueAtTime(0.07, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+    o.connect(g); o.start(now); o.stop(now + 0.1);
+  } else if (type === 'capture') {
+    const o = actx.createOscillator();
+    o.type = 'sawtooth'; o.frequency.setValueAtTime(300, now);
+    o.frequency.exponentialRampToValueAtTime(100, now + 0.2);
+    g.gain.setValueAtTime(0.1, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+    o.connect(g); o.start(now); o.stop(now + 0.25);
+  } else if (type === 'home') {
+    [523, 659, 784].forEach((f, i) => {
+      const o = actx.createOscillator();
+      const gg = actx.createGain();
+      o.type = 'sine'; o.frequency.value = f;
+      gg.gain.setValueAtTime(0, now + i * 0.1);
+      gg.gain.linearRampToValueAtTime(0.08, now + i * 0.1 + 0.02);
+      gg.gain.exponentialRampToValueAtTime(0.001, now + i * 0.1 + 0.2);
+      o.connect(gg); gg.connect(actx.destination);
+      o.start(now + i * 0.1); o.stop(now + i * 0.1 + 0.2);
+    });
+  } else if (type === 'win') {
+    [392, 494, 587, 784, 988].forEach((f, i) => {
+      const o = actx.createOscillator();
+      const gg = actx.createGain();
+      o.type = 'sine'; o.frequency.value = f;
+      gg.gain.setValueAtTime(0, now + i * 0.12);
+      gg.gain.linearRampToValueAtTime(0.08, now + i * 0.12 + 0.03);
+      gg.gain.exponentialRampToValueAtTime(0.001, now + i * 0.12 + 0.35);
+      o.connect(gg); gg.connect(actx.destination);
+      o.start(now + i * 0.12); o.stop(now + i * 0.12 + 0.35);
+    });
+  }
+}
+
+// ── Canvas Setup ──
+const canvas = document.getElementById('board');
+const ctx = canvas.getContext('2d');
+canvas.style.width = BOARD_PX + 'px';
+canvas.style.height = BOARD_PX + 'px';
+
+const diceCanvas = document.getElementById('diceCanvas');
+const diceCtx = diceCanvas.getContext('2d');
+
+// ══════════════════════════════════════════════════════════════
+// ── BOARD PATH DEFINITIONS ──
+// ══════════════════════════════════════════════════════════════
+// 15x15 grid. Cells addressed as (row, col) from top-left.
+// Main track: 52 squares total, shared path going clockwise.
+// Blue starts bottom-left, Red starts top-right.
+
+// Main track (52 positions, clockwise starting from Blue's entry)
+// Blue enters at position 0, Red enters at position 26
+const MAIN_PATH = [
+  // Bottom arm going up (col 6, rows 13->9)
+  [13,6],[12,6],[11,6],[10,6],[9,6],
+  // Left turn across top of bottom arm (row 8, cols 6->0)
+  [8,5],[8,4],[8,3],[8,2],[8,1],[8,0],
+  // Up on left side (rows 8->6, col 0)
+  [7,0],[6,0],
+  // Right across top of left arm (row 6, cols 0->5)
+  [6,1],[6,2],[6,3],[6,4],[6,5],
+  // Top arm going down in left column... actually let me define correctly
+  // Up along left of top arm (rows 6->0, col 6)
+  [5,6],[4,6],[3,6],[2,6],[1,6],[0,6],
+  // Right across top (row 0, cols 6->8)
+  [0,7],[0,8],
+  // Down right side of top arm (rows 0->5, col 8)
+  [1,8],[2,8],[3,8],[4,8],[5,8],
+  // Right across to right arm (row 6, cols 8->14)
+  [6,9],[6,10],[6,11],[6,12],[6,13],[6,14],
+  // Down on right side (rows 6->8, col 14)
+  [7,14],[8,14],
+  // Left across bottom of right arm (row 8, cols 14->9)
+  [8,13],[8,12],[8,11],[8,10],[8,9],
+  // Down along right of bottom arm (rows 8->14, col 8)
+  [9,8],[10,8],[11,8],[12,8],[13,8],
+  // Left across bottom (row 14, cols 8->6)
+  [14,8],[14,7],[14,6],
+  // Up left side of bottom arm (rows 14->13, col 6) -- connects back
+];
+// That gives us 52 cells.
+
+// Home columns (the colored lanes leading to center)
+// Blue home column: row 13->8, col 7 (entering from bottom)
+const BLUE_HOME_COL = [[13,7],[12,7],[11,7],[10,7],[9,7],[8,7]];
+// Red home column: row 1->6, col 7 (entering from top)
+const RED_HOME_COL = [[1,7],[2,7],[3,7],[4,7],[5,7],[6,7]];
+
+// Entry positions on main path
+const BLUE_START = 0;   // Blue pieces enter at main path index 0
+const RED_START = 26;    // Red pieces enter at main path index 26
+
+// Last main path index before entering home column
+const BLUE_HOME_ENTRY = 50; // After index 50, blue enters home column
+const RED_HOME_ENTRY = 24;  // After index 24, red enters home column
+
+// Safe squares (starting positions of each player)
+const SAFE_SQUARES = [BLUE_START, RED_START, 13, 39]; // entry points
+
+// Home base positions (where pieces wait in corners)
+const BLUE_BASE_POS = [[10,1],[10,3],[12,1],[12,3]];
+const RED_BASE_POS = [[2,10],[2,12],[4,10],[4,12]];
+
+// ══════════════════════════════════════════════════════════════
+// ── GAME STATE ──
+// ══════════════════════════════════════════════════════════════
+
+/*
+  Each piece: { state: 'base'|'track'|'home_col'|'finished', trackPos: int, homePos: int }
+  trackPos = index on MAIN_PATH (0-51)
+  homePos = index on HOME_COL (0-5), 6 = finished (center)
+*/
+
+let pieces; // pieces[BLUE][0..3], pieces[RED][0..3]
+let turn;   // BLUE or RED
+let diceValue;
+let diceRolled;  // has the current player rolled?
+let gameOver;
+let extraTurn;   // rolled a 6
+let consecutiveSixes;
+let animating;
+let selectedPiece; // index of piece player clicked, or null
+let movablePieces; // indices of pieces that can move with current dice
+let gameMode, difficulty, llmModel;
+
+// ── Mode & Difficulty ──
+gameMode = '1p';
+difficulty = 2;
+llmModel = '';
+
+document.getElementById('btn1P').addEventListener('click', () => setMode('1p'));
+document.getElementById('btn2P').addEventListener('click', () => setMode('2p'));
+document.getElementById('btnLLM').addEventListener('click', () => setMode('llm'));
+document.getElementById('diffEasy').addEventListener('click', () => setDifficulty(1));
+document.getElementById('diffMedium').addEventListener('click', () => setDifficulty(2));
+document.getElementById('diffHard').addEventListener('click', () => setDifficulty(3));
+
+function setMode(m) {
+  gameMode = m;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === m));
+  document.getElementById('diffSection').classList.toggle('visible', m === '1p' || m === 'llm');
+  document.getElementById('llmSection').classList.toggle('visible', m === 'llm');
+  const isSingle = m === '1p' || m === 'llm';
+  document.getElementById('youLabel').style.display = isSingle ? '' : 'none';
+  const cpuLabel = document.getElementById('cpuLabel');
+  cpuLabel.style.display = isSingle ? '' : 'none';
+  cpuLabel.textContent = m === 'llm' ? '(llm)' : '(cpu)';
+  if (m === 'llm') loadModels();
+  showChat(m === 'llm');
+  initGame();
+}
+
+function setDifficulty(d) {
+  difficulty = d;
+  document.querySelectorAll('.diff-btn').forEach(b => b.classList.toggle('active', +b.dataset.diff === d));
+  initGame();
+}
+
+// ── Ollama Models ──
+async function loadModels() {
+  const sel = document.getElementById('modelSelect');
+  try {
+    const res = await fetch('/api/models');
+    const data = await res.json();
+    if (data.models && data.models.length > 0) {
+      sel.innerHTML = '';
+      data.models.forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name; opt.textContent = name;
+        sel.appendChild(opt);
+      });
+      const preferred = data.models.find(m => m.includes('coder:14b')) || data.models[0];
+      sel.value = preferred;
+      llmModel = preferred;
+    }
+  } catch (e) {
+    sel.innerHTML = '<option>Connection error</option>';
+  }
+}
+document.getElementById('modelSelect').addEventListener('change', (e) => { llmModel = e.target.value; });
+
+// ══════════════════════════════════════════════════════════════
+// ── INIT ──
+// ══════════════════════════════════════════════════════════════
+
+function initGame() {
+  pieces = [
+    // BLUE
+    Array.from({length:4}, () => ({ state: 'base', trackPos: -1, homePos: -1 })),
+    // RED
+    Array.from({length:4}, () => ({ state: 'base', trackPos: -1, homePos: -1 })),
+  ];
+  turn = BLUE;
+  diceValue = 0;
+  diceRolled = false;
+  gameOver = false;
+  extraTurn = false;
+  consecutiveSixes = 0;
+  animating = false;
+  selectedPiece = null;
+  movablePieces = [];
+  updateUI();
+  drawBoard();
+  drawDice(0);
+}
+
+// ══════════════════════════════════════════════════════════════
+// ── GRID HELPERS ──
+// ══════════════════════════════════════════════════════════════
+
+function cellCenter(row, col) {
+  return { x: col * CELL + CELL / 2, y: row * CELL + CELL / 2 };
+}
+
+function getPieceScreenPos(side, pieceIdx) {
+  const p = pieces[side][pieceIdx];
+  if (p.state === 'base') {
+    const bases = side === BLUE ? BLUE_BASE_POS : RED_BASE_POS;
+    return cellCenter(bases[pieceIdx][0], bases[pieceIdx][1]);
+  }
+  if (p.state === 'track') {
+    const absPos = getAbsoluteTrackPos(side, p.trackPos);
+    const cell = MAIN_PATH[absPos];
+    return cellCenter(cell[0], cell[1]);
+  }
+  if (p.state === 'home_col') {
+    const homeCol = side === BLUE ? BLUE_HOME_COL : RED_HOME_COL;
+    const cell = homeCol[p.homePos];
+    return cellCenter(cell[0], cell[1]);
+  }
+  if (p.state === 'finished') {
+    // Center of board
+    return cellCenter(7, 7);
+  }
+  return { x: 0, y: 0 };
+}
+
+// Convert a player-relative track position (0-51) to absolute MAIN_PATH index
+function getAbsoluteTrackPos(side, relPos) {
+  const start = side === BLUE ? BLUE_START : RED_START;
+  return (start + relPos) % 52;
+}
+
+// How many steps around the track before entering home
+function maxTrackSteps(side) {
+  // Blue: starts at 0, enters home after going around to pos 50 (51 steps on track: 0..50)
+  // Red: starts at 26, enters home after going around to pos 24 (51 steps on track)
+  return 51; // Each player traverses 51 main squares before home entry
+}
+
+// ══════════════════════════════════════════════════════════════
+// ── MOVE LOGIC ──
+// ══════════════════════════════════════════════════════════════
+
+function canMovePiece(side, pieceIdx, dice) {
+  const p = pieces[side][pieceIdx];
+  if (p.state === 'finished') return false;
+
+  if (p.state === 'base') {
+    if (dice !== 6) return false;
+    // Check if own piece already at start position
+    const startAbs = side === BLUE ? BLUE_START : RED_START;
+    if (isOwnPieceAt(side, 'track', startAbs)) return false;
+    return true;
+  }
+
+  if (p.state === 'track') {
+    const newRel = p.trackPos + dice;
+    const maxTrack = maxTrackSteps(side);
+    if (newRel <= maxTrack) {
+      // Still on main track, check for own piece blocking
+      const absPos = getAbsoluteTrackPos(side, newRel);
+      if (isOwnPieceAt(side, 'track', absPos)) return false;
+      return true;
+    }
+    // Entering home column
+    const overflow = newRel - maxTrack - 1; // 0-indexed home column position
+    if (overflow < 6) {
+      // Landing on a home column cell
+      if (isOwnPieceInHome(side, overflow)) return false;
+      return true;
+    }
+    if (overflow === 6) return true; // exact count to reach center (finished)
+    return false; // overshoot
+  }
+
+  if (p.state === 'home_col') {
+    const newPos = p.homePos + dice;
+    if (newPos < 6) {
+      if (isOwnPieceInHome(side, newPos)) return false;
+      return true;
+    }
+    if (newPos === 6) return true; // exact to finish
+    return false; // overshoot
+  }
+
+  return false;
+}
+
+function isOwnPieceAt(side, state, absPos) {
+  return pieces[side].some(p => p.state === state && getAbsoluteTrackPos(side, p.trackPos) === absPos);
+}
+
+function isOwnPieceInHome(side, homePos) {
+  return pieces[side].some(p => p.state === 'home_col' && p.homePos === homePos);
+}
+
+function getMovablePieces(side, dice) {
+  const result = [];
+  for (let i = 0; i < 4; i++) {
+    if (canMovePiece(side, i, dice)) result.push(i);
+  }
+  return result;
+}
+
+function executePieceMove(side, pieceIdx, dice, callback) {
+  const p = pieces[side][pieceIdx];
+  let captured = false;
+  let enteredHome = false;
+
+  if (p.state === 'base') {
+    // Enter the board at start position
+    p.state = 'track';
+    p.trackPos = 0;
+    // Check for capture at start
+    captured = checkCapture(side, getAbsoluteTrackPos(side, 0));
+    playSound('move');
+  } else if (p.state === 'track') {
+    const newRel = p.trackPos + dice;
+    const maxTrack = maxTrackSteps(side);
+    if (newRel <= maxTrack) {
+      p.trackPos = newRel;
+      const absPos = getAbsoluteTrackPos(side, newRel);
+      captured = checkCapture(side, absPos);
+      playSound('move');
+    } else {
+      // Enter home column
+      const homeIdx = newRel - maxTrack - 1;
+      if (homeIdx >= 6) {
+        // Exactly finishing
+        p.state = 'finished';
+        p.trackPos = -1;
+        p.homePos = -1;
+        enteredHome = true;
+        playSound('home');
+      } else {
+        p.state = 'home_col';
+        p.trackPos = -1;
+        p.homePos = homeIdx;
+        playSound('move');
+      }
+    }
+  } else if (p.state === 'home_col') {
+    const newPos = p.homePos + dice;
+    if (newPos >= 6) {
+      p.state = 'finished';
+      p.homePos = -1;
+      enteredHome = true;
+      playSound('home');
+    } else {
+      p.homePos = newPos;
+      playSound('move');
+    }
+  }
+
+  // Check win
+  if (pieces[side].every(pp => pp.state === 'finished')) {
+    gameOver = true;
+    playSound('win');
+  }
+
+  drawBoard();
+  updateUI();
+
+  if (callback) setTimeout(callback, 200);
+  return { captured, enteredHome };
+}
+
+function checkCapture(side, absTrackPos) {
+  // Safe squares
+  if (SAFE_SQUARES.includes(absTrackPos)) return false;
+
+  const opp = 1 - side;
+  let captured = false;
+  for (let i = 0; i < 4; i++) {
+    const op = pieces[opp][i];
+    if (op.state === 'track') {
+      const oppAbs = getAbsoluteTrackPos(opp, op.trackPos);
+      if (oppAbs === absTrackPos) {
+        op.state = 'base';
+        op.trackPos = -1;
+        captured = true;
+        playSound('capture');
+      }
+    }
+  }
+  return captured;
+}
+
+// ══════════════════════════════════════════════════════════════
+// ── DICE ──
+// ══════════════════════════════════════════════════════════════
+
+function drawDice(value) {
+  const c = diceCtx;
+  c.clearRect(0, 0, 52, 52);
+  if (value < 1) return;
+
+  c.fillStyle = '#222';
+  const pipPositions = {
+    1: [[26,26]],
+    2: [[14,14],[38,38]],
+    3: [[14,14],[26,26],[38,38]],
+    4: [[14,14],[38,14],[14,38],[38,38]],
+    5: [[14,14],[38,14],[26,26],[14,38],[38,38]],
+    6: [[14,14],[38,14],[14,26],[38,26],[14,38],[38,38]],
+  };
+  const pips = pipPositions[value] || [];
+  for (const [px, py] of pips) {
+    c.beginPath();
+    c.arc(px, py, 5, 0, Math.PI * 2);
+    c.fill();
+  }
+}
+
+let rolling = false;
+function rollDice(callback) {
+  if (rolling || diceRolled || gameOver) return;
+  rolling = true;
+  playSound('roll');
+  const display = document.getElementById('diceDisplay');
+  display.classList.add('rolling');
+
+  let frames = 0;
+  const maxFrames = 15;
+  const interval = setInterval(() => {
+    const fake = Math.floor(Math.random() * 6) + 1;
+    drawDice(fake);
+    frames++;
+    if (frames >= maxFrames) {
+      clearInterval(interval);
+      display.classList.remove('rolling');
+      diceValue = Math.floor(Math.random() * 6) + 1;
+      drawDice(diceValue);
+      rolling = false;
+      diceRolled = true;
+      if (callback) callback(diceValue);
+    }
+  }, 60);
+}
+
+document.getElementById('btnRoll').addEventListener('click', () => {
+  if (isAiTurn() || animating || gameOver) return;
+  if (diceRolled) return;
+  rollDice(onDiceRolled);
+});
+
+function onDiceRolled(value) {
+  movablePieces = getMovablePieces(turn, value);
+
+  if (value === 6) {
+    consecutiveSixes++;
+    if (consecutiveSixes >= 3) {
+      // Three sixes in a row: lose turn
+      setStatus('Three sixes! Turn forfeited.');
+      consecutiveSixes = 0;
+      diceRolled = false;
+      diceValue = 0;
+      turn = 1 - turn;
+      updateUI();
+      drawBoard();
+      if (isAiTurn()) setTimeout(doAiTurn, 600);
+      return;
+    }
+  }
+
+  if (movablePieces.length === 0) {
+    setStatus('No valid moves. ' + (value !== 6 ? 'Turn passes.' : 'Roll again (6)!'));
+    if (value === 6) {
+      // Extra turn
+      diceRolled = false;
+      diceValue = 0;
+      updateUI();
+      if (isAiTurn()) setTimeout(doAiTurn, 600);
+    } else {
+      consecutiveSixes = 0;
+      diceRolled = false;
+      diceValue = 0;
+      turn = 1 - turn;
+      updateUI();
+      drawBoard();
+      if (isAiTurn()) setTimeout(doAiTurn, 600);
+    }
+    return;
+  }
+
+  if (movablePieces.length === 1) {
+    // Auto-move single option
+    const result = executePieceMove(turn, movablePieces[0], value, () => {
+      afterMove(result);
+    });
+    return;
+  }
+
+  // Multiple options: wait for click (or AI)
+  selectedPiece = null;
+  updateUI();
+  drawBoard();
+}
+
+function afterMove(result) {
+  const wasSix = diceValue === 6;
+  const side = turn;
+
+  if (gameOver) {
+    updateUI();
+    drawBoard();
+    // Auto-taunt on win
+    if (gameMode === 'llm') autoTaunt(true, result.captured, result.enteredHome);
+    return;
+  }
+
+  // Auto-taunt on captures/home entries
+  if (gameMode === 'llm' && turn === RED) {
+    if (result.captured || result.enteredHome) {
+      autoTaunt(false, result.captured, result.enteredHome);
+    }
+  }
+
+  if (wasSix) {
+    // Extra turn
+    diceRolled = false;
+    diceValue = 0;
+    selectedPiece = null;
+    movablePieces = [];
+    setStatus('Rolled 6! Roll again.');
+    updateUI();
+    drawBoard();
+    if (isAiTurn()) setTimeout(doAiTurn, 600);
+  } else {
+    consecutiveSixes = 0;
+    diceRolled = false;
+    diceValue = 0;
+    selectedPiece = null;
+    movablePieces = [];
+    turn = 1 - turn;
+    updateUI();
+    drawBoard();
+    if (isAiTurn()) setTimeout(doAiTurn, 600);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// ── AI ──
+// ══════════════════════════════════════════════════════════════
+
+function isAiTurn() {
+  return (gameMode === '1p' || gameMode === 'llm') && turn === RED && !gameOver;
+}
+
+function doAiTurn() {
+  if (!isAiTurn()) return;
+  setStatus((gameMode === 'llm' ? 'LLM' : 'Computer') + ' is thinking...');
+
+  rollDice((value) => {
+    movablePieces = getMovablePieces(RED, value);
+
+    if (movablePieces.length === 0) {
+      if (value === 6) {
+        diceRolled = false;
+        diceValue = 0;
+        setTimeout(doAiTurn, 600);
+      } else {
+        consecutiveSixes = 0;
+        diceRolled = false;
+        diceValue = 0;
+        turn = BLUE;
+        updateUI();
+        drawBoard();
+      }
+      return;
+    }
+
+    if (value === 6) {
+      consecutiveSixes++;
+      if (consecutiveSixes >= 3) {
+        consecutiveSixes = 0;
+        diceRolled = false;
+        diceValue = 0;
+        turn = BLUE;
+        updateUI();
+        drawBoard();
+        return;
+      }
+    }
+
+    const bestIdx = pickAiPiece(RED, value, movablePieces);
+
+    setTimeout(() => {
+      const result = executePieceMove(RED, bestIdx, value, () => {
+        afterMove(result);
+      });
+    }, 400);
+  });
+}
+
+function pickAiPiece(side, dice, candidates) {
+  if (difficulty === 1) {
+    // Easy: random
+    return candidates[Math.floor(Math.random() * candidates.length)];
+  }
+
+  // Score each candidate
+  let best = -Infinity, bestIdx = candidates[0];
+
+  for (const idx of candidates) {
+    let score = 0;
+    const p = pieces[side][idx];
+
+    // Simulate move
+    const simPieces = JSON.parse(JSON.stringify(pieces));
+    const sp = simPieces[side][idx];
+
+    if (sp.state === 'base') {
+      sp.state = 'track';
+      sp.trackPos = 0;
+      const absPos = getAbsoluteTrackPos(side, 0);
+      // Check capture opportunity
+      const opp = 1 - side;
+      for (let i = 0; i < 4; i++) {
+        if (simPieces[opp][i].state === 'track') {
+          const oppAbs = getAbsoluteTrackPos(opp, simPieces[opp][i].trackPos);
+          if (oppAbs === absPos && !SAFE_SQUARES.includes(absPos)) {
+            score += 50; // capture!
+          }
+        }
+      }
+      score += 10; // entering is good
+    } else if (sp.state === 'track') {
+      const newRel = sp.trackPos + dice;
+      const maxTrack = maxTrackSteps(side);
+
+      if (newRel <= maxTrack) {
+        const absPos = getAbsoluteTrackPos(side, newRel);
+
+        // Capture check
+        const opp = 1 - side;
+        for (let i = 0; i < 4; i++) {
+          if (simPieces[opp][i].state === 'track') {
+            const oppAbs = getAbsoluteTrackPos(opp, simPieces[opp][i].trackPos);
+            if (oppAbs === absPos && !SAFE_SQUARES.includes(absPos)) {
+              score += 50;
+            }
+          }
+        }
+
+        // Move to safe square
+        if (SAFE_SQUARES.includes(absPos)) score += 8;
+
+        // Progress bonus
+        score += newRel * 0.5;
+
+        if (difficulty === 3) {
+          // Hard: check if we'd be in danger
+          // Check if opponent can reach us next turn
+          let danger = 0;
+          for (let i = 0; i < 4; i++) {
+            if (simPieces[1-side][i].state === 'track') {
+              const oppAbs = getAbsoluteTrackPos(1-side, simPieces[1-side][i].trackPos);
+              // Opponent could roll 1-6 to reach us
+              for (let d = 1; d <= 6; d++) {
+                const oppNewRel = simPieces[1-side][i].trackPos + d;
+                const oppNewAbs = getAbsoluteTrackPos(1-side, oppNewRel % 52);
+                if (oppNewAbs === absPos && !SAFE_SQUARES.includes(absPos)) {
+                  danger += 5;
+                }
+              }
+            }
+          }
+          score -= danger;
+
+          // Blocking: prefer positions that block opponent paths
+          // Prefer advancing pieces that are further back
+          if (sp.trackPos < 20) score += 3;
+        }
+      } else {
+        // Entering home column
+        const homeIdx = newRel - maxTrack - 1;
+        if (homeIdx >= 6) {
+          score += 100; // finishing!
+        } else {
+          score += 40 + homeIdx * 5; // entering home is great
+        }
+      }
+    } else if (sp.state === 'home_col') {
+      const newPos = sp.homePos + dice;
+      if (newPos >= 6) {
+        score += 100; // finishing!
+      } else {
+        score += 30 + newPos * 3;
+      }
+    }
+
+    // Medium/Hard: prefer pieces closer to home
+    if (difficulty >= 2 && sp.state === 'track') {
+      score += sp.trackPos * 0.3;
+    }
+
+    // Small random factor
+    score += Math.random() * 2;
+
+    if (score > best) {
+      best = score;
+      bestIdx = idx;
+    }
+  }
+
+  return bestIdx;
+}
+
+// ══════════════════════════════════════════════════════════════
+// ── DRAWING ──
+// ══════════════════════════════════════════════════════════════
+
+const COLORS = {
+  blue: { main: '#2266cc', light: '#4499ff', dark: '#113377', bg: '#1a3366' },
+  red: { main: '#cc2222', light: '#ff5555', dark: '#771111', bg: '#661a1a' },
+  green: { main: '#22aa44', light: '#44dd66', dark: '#116622', bg: '#1a4422' },
+  yellow: { main: '#ccaa00', light: '#ffdd33', dark: '#776600', bg: '#443a0a' },
+};
+
+function isOnBoard(r, c) {
+  // Cross shape: columns 6-8 span all rows, rows 6-8 span all cols
+  // Plus the center 3x3
+  if (c >= 6 && c <= 8) return true;  // vertical arm
+  if (r >= 6 && r <= 8) return true;  // horizontal arm
+  return false;
+}
+
+function isHomeBase(r, c) {
+  // Blue base: bottom-left corner
+  if (r >= 9 && r <= 14 && c >= 0 && c <= 5) return 'blue';
+  // Red base: top-right corner
+  if (r >= 0 && r <= 5 && c >= 9 && c <= 14) return 'red';
+  // Green base: top-left corner
+  if (r >= 0 && r <= 5 && c >= 0 && c <= 5) return 'green';
+  // Yellow base: bottom-right corner
+  if (r >= 9 && r <= 14 && c >= 9 && c <= 14) return 'yellow';
+  return null;
+}
+
+function getCellColor(r, c) {
+  // Home columns
+  // Blue home: col 7, rows 9-13
+  if (c === 7 && r >= 9 && r <= 13) return 'blue';
+  // Red home: col 7, rows 1-5
+  if (c === 7 && r >= 1 && r <= 5) return 'red';
+  // Green home: row 7, cols 1-5
+  if (r === 7 && c >= 1 && c <= 5) return 'green';
+  // Yellow home: row 7, cols 9-13
+  if (r === 7 && c >= 9 && c <= 13) return 'yellow';
+
+  // Starting squares
+  if (r === 13 && c === 6) return 'blue';  // Blue start
+  if (r === 1 && c === 8) return 'red';    // Red start
+  if (r === 6 && c === 1) return 'green';  // Green start (decorative)
+  if (r === 8 && c === 13) return 'yellow'; // Yellow start (decorative)
+
+  // Safe squares coloring
+  if (r === 8 && c === 0) return 'green';
+  if (r === 6 && c === 14) return 'yellow';
+
+  return null;
+}
+
+function drawBoard() {
+  ctx.clearRect(0, 0, BOARD_PX, BOARD_PX);
+
+  // Background
+  ctx.fillStyle = '#100e14';
+  ctx.fillRect(0, 0, BOARD_PX, BOARD_PX);
+
+  // Draw home bases (colored corners)
+  drawHomeBase('blue', 9, 0, COLORS.blue);
+  drawHomeBase('red', 0, 9, COLORS.red);
+  drawHomeBase('green', 0, 0, COLORS.green);
+  drawHomeBase('yellow', 9, 9, COLORS.yellow);
+
+  // Draw cross-shaped board
+  for (let r = 0; r < 15; r++) {
+    for (let c = 0; c < 15; c++) {
+      if (!isOnBoard(r, c)) continue;
+      if (isHomeBase(r, c)) continue;
+
+      const x = c * CELL, y = r * CELL;
+
+      // Default board cell
+      ctx.fillStyle = '#f0ece4';
+      ctx.fillRect(x + 0.5, y + 0.5, CELL - 1, CELL - 1);
+
+      // Colored cells
+      const cellCol = getCellColor(r, c);
+      if (cellCol) {
+        const col = COLORS[cellCol];
+        ctx.fillStyle = col.light + '55';
+        ctx.fillRect(x + 0.5, y + 0.5, CELL - 1, CELL - 1);
+      }
+
+      // Center triangle area (7,7)
+      if (r === 7 && c === 7) {
+        drawCenterSquare(x, y);
+      }
+
+      // Grid lines
+      ctx.strokeStyle = '#ccc8be';
+      ctx.lineWidth = 0.5;
+      ctx.strokeRect(x + 0.5, y + 0.5, CELL - 1, CELL - 1);
+    }
+  }
+
+  // Draw colored home column highlights
+  drawHomeColumn(BLUE_HOME_COL, COLORS.blue);
+  drawHomeColumn(RED_HOME_COL, COLORS.red);
+  drawHomeColumn([[7,1],[7,2],[7,3],[7,4],[7,5]], COLORS.green);
+  drawHomeColumn([[7,9],[7,10],[7,11],[7,12],[7,13]], COLORS.yellow);
+
+  // Draw safe square markers
+  for (const idx of SAFE_SQUARES) {
+    const cell = MAIN_PATH[idx];
+    const pos = cellCenter(cell[0], cell[1]);
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, 4, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(pos.x - 4, pos.y);
+    ctx.lineTo(pos.x, pos.y - 4);
+    ctx.lineTo(pos.x + 4, pos.y);
+    ctx.lineTo(pos.x, pos.y + 4);
+    ctx.closePath();
+    ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  // Draw starting arrows
+  drawStartArrow(BLUE, COLORS.blue);
+  drawStartArrow(RED, COLORS.red);
+
+  // Highlight movable pieces
+  if (diceRolled && !gameOver && !isAiTurn() && movablePieces.length > 0) {
+    for (const idx of movablePieces) {
+      const pos = getPieceScreenPos(turn, idx);
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, CELL * 0.45, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(255,255,100,0.7)';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+
+      // Pulsing glow
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, CELL * 0.5, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(255,255,100,0.25)';
+      ctx.lineWidth = 4;
+      ctx.stroke();
+    }
+  }
+
+  // Draw pieces
+  drawPieces();
+}
+
+function drawHomeBase(colorName, startRow, startCol, colors) {
+  const x = startCol * CELL, y = startRow * CELL;
+  const w = 6 * CELL, h = 6 * CELL;
+
+  // Outer area
+  ctx.fillStyle = colors.bg;
+  ctx.fillRect(x, y, w, h);
+  ctx.strokeStyle = colors.dark;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
+
+  // Inner white circle area for pieces
+  const cx = x + w / 2, cy = y + h / 2;
+  ctx.fillStyle = '#1a1726';
+  ctx.beginPath();
+  ctx.arc(cx, cy, CELL * 1.8, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = colors.main;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Draw base piece slots
+  const bases = colorName === 'blue' ? BLUE_BASE_POS :
+                colorName === 'red' ? RED_BASE_POS : null;
+  if (!bases) return;
+
+  for (let i = 0; i < 4; i++) {
+    const pos = cellCenter(bases[i][0], bases[i][1]);
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, CELL * 0.3, 0, Math.PI * 2);
+    ctx.fillStyle = colors.main + '33';
+    ctx.fill();
+    ctx.strokeStyle = colors.main + '66';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+}
+
+function drawHomeColumn(homeCols, colors) {
+  for (const [r, c] of homeCols) {
+    const x = c * CELL, y = r * CELL;
+    ctx.fillStyle = colors.light + '44';
+    ctx.fillRect(x + 1, y + 1, CELL - 2, CELL - 2);
+  }
+}
+
+function drawCenterSquare(x, y) {
+  // Draw colored triangles pointing to center
+  const cx = x + CELL / 2, cy = y + CELL / 2;
+  const hs = CELL / 2;
+
+  // Blue triangle (bottom)
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(x, y + CELL);
+  ctx.lineTo(x + CELL, y + CELL);
+  ctx.closePath();
+  ctx.fillStyle = COLORS.blue.main;
+  ctx.fill();
+
+  // Red triangle (top)
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(x, y);
+  ctx.lineTo(x + CELL, y);
+  ctx.closePath();
+  ctx.fillStyle = COLORS.red.main;
+  ctx.fill();
+
+  // Green triangle (left)
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(x, y);
+  ctx.lineTo(x, y + CELL);
+  ctx.closePath();
+  ctx.fillStyle = COLORS.green.main;
+  ctx.fill();
+
+  // Yellow triangle (right)
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(x + CELL, y);
+  ctx.lineTo(x + CELL, y + CELL);
+  ctx.closePath();
+  ctx.fillStyle = COLORS.yellow.main;
+  ctx.fill();
+}
+
+function drawStartArrow(side, colors) {
+  const startIdx = side === BLUE ? BLUE_START : RED_START;
+  const cell = MAIN_PATH[startIdx];
+  const pos = cellCenter(cell[0], cell[1]);
+
+  ctx.beginPath();
+  ctx.arc(pos.x, pos.y, CELL * 0.35, 0, Math.PI * 2);
+  ctx.fillStyle = colors.main + '33';
+  ctx.fill();
+  ctx.strokeStyle = colors.main;
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+}
+
+function drawPieces() {
+  for (let side = 0; side < 2; side++) {
+    const colors = side === BLUE ? COLORS.blue : COLORS.red;
+    // Count finished pieces at center to stack them
+    let finishedCount = 0;
+
+    for (let i = 0; i < 4; i++) {
+      const p = pieces[side][i];
+      const pos = getPieceScreenPos(side, i);
+
+      if (p.state === 'finished') {
+        // Draw small finished indicator near center
+        const angle = (side * 4 + finishedCount) * (Math.PI * 2 / 8);
+        const fr = CELL * 0.3;
+        const fx = 7 * CELL + CELL / 2 + Math.cos(angle) * fr;
+        const fy = 7 * CELL + CELL / 2 + Math.sin(angle) * fr;
+        drawGamePiece(fx, fy, colors, i + 1, 0.6);
+        finishedCount++;
+        continue;
+      }
+
+      drawGamePiece(pos.x, pos.y, colors, i + 1, 1);
+    }
+  }
+}
+
+function drawGamePiece(x, y, colors, num, scale) {
+  const r = CELL * 0.35 * scale;
+
+  // Shadow
+  ctx.beginPath();
+  ctx.arc(x + 1, y + 2, r, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  ctx.fill();
+
+  // Main circle with gradient
+  const grad = ctx.createRadialGradient(x - r * 0.3, y - r * 0.3, 0, x, y, r);
+  grad.addColorStop(0, colors.light);
+  grad.addColorStop(0.5, colors.main);
+  grad.addColorStop(1, colors.dark);
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Inner ring
+  ctx.beginPath();
+  ctx.arc(x, y, r * 0.7, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+  ctx.lineWidth = 1 * scale;
+  ctx.stroke();
+
+  // Highlight
+  ctx.beginPath();
+  ctx.ellipse(x - r * 0.2, y - r * 0.25, r * 0.35, r * 0.18, -0.5, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255,255,255,0.25)';
+  ctx.fill();
+
+  // Number
+  ctx.fillStyle = '#fff';
+  ctx.font = `bold ${Math.round(11 * scale)}px 'DM Sans', sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(num, x, y + 1);
+}
+
+// ══════════════════════════════════════════════════════════════
+// ── CLICK HANDLING ──
+// ══════════════════════════════════════════════════════════════
+
+canvas.addEventListener('click', (e) => {
+  if (animating || gameOver || isAiTurn()) return;
+  if (!diceRolled || movablePieces.length === 0) return;
+
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = BOARD_PX / rect.width;
+  const scaleY = BOARD_PX / rect.height;
+  const mx = (e.clientX - rect.left) * scaleX;
+  const my = (e.clientY - rect.top) * scaleY;
+
+  // Find which piece was clicked
+  let clickedIdx = -1;
+  let closestDist = CELL * 0.5;
+
+  for (const idx of movablePieces) {
+    const pos = getPieceScreenPos(turn, idx);
+    const dx = mx - pos.x, dy = my - pos.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < closestDist) {
+      closestDist = dist;
+      clickedIdx = idx;
+    }
+  }
+
+  if (clickedIdx >= 0) {
+    const result = executePieceMove(turn, clickedIdx, diceValue, () => {
+      afterMove(result);
+    });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
+// ── UI ──
+// ══════════════════════════════════════════════════════════════
+
+function updateUI() {
+  const turnDisc = document.getElementById('turnDisc');
+  const turnText = document.getElementById('turnText');
+  const indicator = document.getElementById('turnIndicator');
+
+  turnDisc.className = 'turn-disc ' + (turn === BLUE ? 'blue' : 'red');
+  indicator.className = 'turn-indicator ' + (turn === BLUE ? 'active-blue' : 'active-red');
+
+  if (gameMode === '1p' || gameMode === 'llm') {
+    const opName = gameMode === 'llm' ? 'LLM' : 'Computer';
+    turnText.textContent = turn === BLUE ? 'Your turn' : opName + ' plays...';
+  } else {
+    turnText.textContent = (turn === BLUE ? 'Blue' : 'Red') + ' plays';
+  }
+
+  // Roll button state
+  const btnRoll = document.getElementById('btnRoll');
+  btnRoll.disabled = diceRolled || gameOver || isAiTurn() || rolling;
+
+  // Piece status pips
+  updatePiecePips();
+
+  // Status
+  const msg = document.getElementById('statusMsg');
+  if (gameOver) {
+    const winner = turn; // The side that just finished
+    // Actually, check which side has all finished
+    const blueWon = pieces[BLUE].every(p => p.state === 'finished');
+    const redWon = pieces[RED].every(p => p.state === 'finished');
+    if (blueWon) {
+      if (gameMode === '1p' || gameMode === 'llm') {
+        msg.textContent = 'You win! All pieces home!';
+      } else {
+        msg.textContent = 'Blue wins the game!';
+      }
+    } else if (redWon) {
+      if (gameMode === '1p' || gameMode === 'llm') {
+        msg.textContent = (gameMode === 'llm' ? 'LLM' : 'Computer') + ' wins!';
+      } else {
+        msg.textContent = 'Red wins the game!';
+      }
+    }
+    msg.className = 'status-msg winner';
+  } else if (isAiTurn()) {
+    const thinkName = gameMode === 'llm' ? 'LLM' : 'Computer';
+    msg.innerHTML = thinkName + ' thinking <span class="thinking-dots"><span>.</span><span>.</span><span>.</span></span>';
+    msg.className = 'status-msg thinking';
+  } else if (diceRolled && movablePieces.length > 1) {
+    msg.textContent = 'Rolled ' + diceValue + '. Click a highlighted piece.';
+    msg.className = 'status-msg';
+  } else if (diceRolled && movablePieces.length === 0) {
+    msg.textContent = 'No moves available.';
+    msg.className = 'status-msg';
+  } else {
+    msg.textContent = 'Roll the dice!';
+    msg.className = 'status-msg';
+  }
+}
+
+function setStatus(text) {
+  const msg = document.getElementById('statusMsg');
+  msg.textContent = text;
+  msg.className = 'status-msg';
+}
+
+function updatePiecePips() {
+  ['blue', 'red'].forEach((color, side) => {
+    const el = document.getElementById(color + 'Pips');
+    el.innerHTML = '';
+    for (let i = 0; i < 4; i++) {
+      const pip = document.createElement('div');
+      pip.className = 'piece-pip ' + color;
+      if (pieces[side][i].state === 'finished') {
+        pip.classList.add('home');
+        pip.textContent = '\u2713';
+      } else {
+        pip.textContent = (i + 1);
+      }
+      el.appendChild(pip);
+    }
+  });
+}
+
+// ══════════════════════════════════════════════════════════════
+// ── NEW GAME ──
+// ══════════════════════════════════════════════════════════════
+
+document.getElementById('btnNew').addEventListener('click', () => {
+  initGame();
+});
+
+// ══════════════════════════════════════════════════════════════
+// ── CHAT ──
+// ══════════════════════════════════════════════════════════════
+
+const chatPanel = document.getElementById('chatPanel');
+const chatMessages = document.getElementById('chatMessages');
+const chatInput = document.getElementById('chatInput');
+const chatSend = document.getElementById('chatSend');
+let chatSessionId = 'session-ludo-' + Date.now();
+let chatBusy = false;
+
+function showChat(visible) {
+  chatPanel.classList.toggle('visible', visible);
+  document.getElementById('chatSpacer').style.display = visible ? 'none' : 'block';
+}
+
+function addChatBubble(text, type) {
+  const bubble = document.createElement('div');
+  bubble.className = 'chat-bubble ' + type;
+  bubble.textContent = text;
+  chatMessages.appendChild(bubble);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+  return bubble;
+}
+
+function boardToString() {
+  let s = '';
+  for (let side = 0; side < 2; side++) {
+    const name = side === BLUE ? 'Blue' : 'Red';
+    s += name + ': ';
+    for (let i = 0; i < 4; i++) {
+      const p = pieces[side][i];
+      s += `P${i+1}=${p.state}`;
+      if (p.state === 'track') s += `@${p.trackPos}`;
+      if (p.state === 'home_col') s += `@${p.homePos}`;
+      s += ' ';
+    }
+    s += '\n';
+  }
+  return s;
+}
+
+function getGameStatus() {
+  const blueFinished = pieces[BLUE].filter(p => p.state === 'finished').length;
+  const redFinished = pieces[RED].filter(p => p.state === 'finished').length;
+  const blueOnTrack = pieces[BLUE].filter(p => p.state === 'track' || p.state === 'home_col').length;
+  const redOnTrack = pieces[RED].filter(p => p.state === 'track' || p.state === 'home_col').length;
+
+  let status = `Ludo game. Blue (human) has ${blueFinished}/4 pieces home, ${blueOnTrack} on track. `;
+  status += `Red (you, the LLM) has ${redFinished}/4 pieces home, ${redOnTrack} on track. `;
+
+  if (redFinished > blueFinished) status += `You are WINNING! `;
+  else if (blueFinished > redFinished) status += `You are LOSING! `;
+  else status += `It's TIED. `;
+
+  if (gameOver) {
+    const blueWon = pieces[BLUE].every(p => p.state === 'finished');
+    if (blueWon) status += `GAME OVER - YOU LOST! The human got all pieces home first!`;
+    else status += `GAME OVER - YOU WON! You got all pieces home first!`;
+  } else {
+    status += `Game in progress. ${turn === BLUE ? "Human's" : "Your"} turn.`;
+  }
+  return status;
+}
+
+async function sendChat() {
+  const text = chatInput.value.trim();
+  if (!text || chatBusy) return;
+
+  chatInput.value = '';
+  addChatBubble(text, 'user');
+
+  chatBusy = true;
+  const typingBubble = addChatBubble('...', 'llm-typing');
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: text,
+        model: llmModel || 'qwen2.5-coder:14b',
+        board: boardToString(),
+        sessionId: chatSessionId,
+        gameStatus: getGameStatus(),
+        gameName: 'ludo'
+      })
+    });
+    const data = await res.json();
+    typingBubble.remove();
+    addChatBubble(data.reply || '...', 'llm');
+  } catch (e) {
+    typingBubble.remove();
+    addChatBubble('*connection lost*', 'system');
+  }
+  chatBusy = false;
+}
+
+chatSend.addEventListener('click', sendChat);
+chatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendChat(); });
+
+// Auto-taunt
+let moveCount = 0;
+async function autoTaunt(isGameEnd, wasCap, wasHome) {
+  if (gameMode !== 'llm' || chatBusy) return;
+  moveCount++;
+
+  const shouldTaunt = isGameEnd || wasCap || wasHome || moveCount === 1 || Math.random() < 0.3;
+  if (!shouldTaunt) return;
+
+  chatBusy = true;
+  const typingBubble = addChatBubble('...', 'llm-typing');
+
+  const prompts = [];
+  if (wasCap) {
+    prompts.push('*just sent an opponent piece back to base* Celebrate and trash talk about it.');
+    prompts.push('*just captured a piece* Mock the human for getting caught.');
+  }
+  if (wasHome) {
+    prompts.push('*just got a piece to the home center* Brag about your progress.');
+  }
+  if (isGameEnd) {
+    const blueWon = pieces[BLUE].every(p => p.state === 'finished');
+    if (blueWon) {
+      prompts.push('*you just lost the Ludo game* Be dramatically salty. Demand a rematch.');
+    } else {
+      prompts.push('*you just won the Ludo game* Gloat mercilessly. You destroyed them at Ludo.');
+    }
+  }
+  if (prompts.length === 0) {
+    prompts.push('*just made a move in Ludo* React with trash talk.');
+    prompts.push('*rolling dice* Say something cocky about the game.');
+  }
+
+  const tauntPrompt = prompts[Math.floor(Math.random() * prompts.length)];
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: tauntPrompt,
+        model: llmModel || 'qwen2.5-coder:14b',
+        board: boardToString(),
+        sessionId: chatSessionId,
+        gameStatus: getGameStatus(),
+        gameName: 'ludo'
+      })
+    });
+    const data = await res.json();
+    typingBubble.remove();
+    addChatBubble(data.reply || '...', 'llm');
+  } catch (e) {
+    typingBubble.remove();
+  }
+  chatBusy = false;
+}
+
+// Wrap initGame to clear chat
+const _origInit = initGame;
+initGame = function() {
+  _origInit();
+  moveCount = 0;
+  chatSessionId = 'session-ludo-' + Date.now();
+  chatMessages.innerHTML = '<div class="chat-bubble system">Chat with the LLM opponent. It bites back.</div>';
+  fetch('/api/chat/clear', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sessionId: chatSessionId })
+  }).catch(() => {});
+};
+
+// ── Start ──
+initGame();
+</script>
+
+</body>
+</html>

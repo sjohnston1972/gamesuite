@@ -1,0 +1,1291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mahjong Solitaire</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@400;500;600&display=swap');
+
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+
+  :root {
+    --bg: #0c0e14;
+    --surface: #141820;
+    --surface-2: #1a1f2a;
+    --border: #243028;
+    --jade: #4a9a6a;
+    --jade-dim: #2a5a3a;
+    --cream: #e8dcc8;
+    --cream-dim: #a89878;
+    --gold: #c9a84c;
+    --gold-dim: #8a7233;
+    --tile-face: #f0e8d8;
+    --tile-side: #c8bca8;
+    --tile-shadow: #3a3428;
+  }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: var(--bg);
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    overflow: hidden;
+  }
+
+  body {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: max(20px, calc(50vh - 300px));
+    background:
+      radial-gradient(ellipse at 30% 20%, rgba(40,100,60,0.06) 0%, transparent 60%),
+      radial-gradient(ellipse at 70% 80%, rgba(20,80,40,0.05) 0%, transparent 60%),
+      var(--bg);
+  }
+
+  .game-container {
+    display: flex;
+    gap: 30px;
+    align-items: flex-start;
+    user-select: none;
+  }
+
+  .board-frame {
+    position: relative;
+    flex-shrink: 0;
+    padding: 18px;
+    background: linear-gradient(145deg, #1a3a2a, #0e2418, #1a3a2a);
+    border-radius: 8px;
+    box-shadow:
+      0 2px 4px rgba(0,0,0,0.4),
+      0 8px 24px rgba(0,0,0,0.5),
+      0 20px 60px rgba(0,0,0,0.4),
+      inset 0 1px 0 rgba(255,255,255,0.06);
+  }
+
+  .board-frame::before {
+    content: '';
+    position: absolute;
+    inset: 4px;
+    border: 1px solid rgba(74,154,106,0.2);
+    border-radius: 6px;
+    pointer-events: none;
+  }
+
+  canvas {
+    display: block;
+    border-radius: 3px;
+    cursor: pointer;
+  }
+
+  .sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 220px;
+    flex-shrink: 0;
+  }
+
+  .back-link {
+    font-size: 12px;
+    color: var(--cream-dim);
+    text-decoration: none;
+    letter-spacing: 1px;
+    transition: color 0.2s;
+  }
+  .back-link:hover { color: var(--jade); }
+
+  .game-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--jade);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    line-height: 1;
+  }
+  .game-title span {
+    display: block;
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--cream-dim);
+    letter-spacing: 6px;
+    margin-top: 4px;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  /* ── Mode Selector ── */
+  .mode-panel {
+    padding: 14px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .mode-panel h3 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--jade-dim);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 10px;
+  }
+  .mode-toggle {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+  .mode-btn {
+    flex: 1;
+    padding: 8px 6px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--cream-dim);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+  }
+  .mode-btn:hover {
+    border-color: var(--jade-dim);
+    color: var(--cream);
+  }
+  .mode-btn.active {
+    border-color: var(--jade);
+    color: var(--jade);
+    background: rgba(74,154,106,0.08);
+  }
+  .llm-section {
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    transition: max-height 0.3s ease, opacity 0.25s ease, margin-top 0.3s ease;
+    margin-top: 0;
+  }
+  .llm-section.visible {
+    max-height: 120px;
+    opacity: 1;
+    margin-top: 10px;
+  }
+  .llm-label {
+    font-size: 11px;
+    color: var(--cream-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+  }
+  .model-select {
+    width: 100%;
+    padding: 7px 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    cursor: pointer;
+    outline: none;
+  }
+  .model-select:focus {
+    border-color: var(--jade-dim);
+  }
+
+  /* ── Stats Panel ── */
+  .score-panel {
+    padding: 16px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .score-panel h3 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--jade-dim);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+  }
+  .score-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+  }
+  .score-row + .score-row { border-top: 1px solid var(--border); }
+  .score-label { font-size: 13px; color: var(--cream-dim); }
+  .score-value {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--jade);
+  }
+
+  .status-msg {
+    padding: 14px 18px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--cream-dim);
+    line-height: 1.5;
+    height: 67px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    transition: all 0.3s;
+  }
+  .status-msg.winner {
+    border-color: var(--jade);
+    color: var(--jade);
+    font-weight: 600;
+  }
+  .status-msg.stuck {
+    border-color: #c44;
+    color: #e88;
+  }
+
+  .btn-row {
+    display: flex;
+    gap: 8px;
+  }
+  .btn-new, .btn-hint, .btn-shuffle {
+    padding: 12px 14px;
+    background: transparent;
+    border: 1px solid var(--jade-dim);
+    border-radius: 6px;
+    color: var(--jade);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex: 1;
+    text-align: center;
+  }
+  .btn-new:hover, .btn-hint:hover, .btn-shuffle:hover {
+    background: rgba(74,154,106,0.1);
+    border-color: var(--jade);
+  }
+  .btn-new { flex: 1; }
+
+  /* ── Chat Panel ── */
+  .chat-spacer {
+    width: 220px;
+    flex-shrink: 0;
+  }
+  .chat-panel {
+    display: none;
+    flex-direction: column;
+    width: 340px;
+    flex-shrink: 0;
+    height: 572px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .chat-panel.visible { display: flex; }
+
+  .chat-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--jade-dim);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    flex-shrink: 0;
+  }
+
+  .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .chat-bubble {
+    max-width: 85%;
+    padding: 8px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    line-height: 1.45;
+    word-wrap: break-word;
+    animation: fadeIn 0.2s ease;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .chat-bubble.user {
+    align-self: flex-end;
+    background: rgba(201,168,76,0.15);
+    color: var(--cream);
+    border-bottom-right-radius: 4px;
+  }
+  .chat-bubble.llm {
+    align-self: flex-start;
+    background: rgba(74,154,106,0.15);
+    color: var(--cream);
+    border-bottom-left-radius: 4px;
+  }
+  .chat-bubble.system {
+    align-self: center;
+    background: transparent;
+    color: var(--cream-dim);
+    font-size: 11px;
+    font-style: italic;
+    padding: 4px 8px;
+  }
+  .chat-bubble.llm-typing {
+    align-self: flex-start;
+    background: rgba(74,154,106,0.1);
+    color: var(--cream-dim);
+    border-bottom-left-radius: 4px;
+  }
+
+  .chat-input-row {
+    display: flex;
+    gap: 6px;
+    padding: 10px 12px;
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .chat-input {
+    flex: 1;
+    padding: 8px 10px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .chat-input:focus { border-color: var(--jade-dim); }
+  .chat-input::placeholder { color: var(--cream-dim); opacity: 0.5; }
+
+  .chat-send {
+    padding: 8px 14px;
+    background: rgba(74,154,106,0.2);
+    border: 1px solid rgba(74,154,106,0.3);
+    border-radius: 6px;
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .chat-send:hover {
+    background: rgba(74,154,106,0.3);
+    border-color: var(--jade);
+  }
+
+  @keyframes dotPulse {
+    0%, 80%, 100% { opacity: 0.2; }
+    40% { opacity: 1; }
+  }
+  .thinking-dots span {
+    animation: dotPulse 1.4s infinite;
+    font-size: 18px;
+    letter-spacing: 2px;
+  }
+  .thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+  @media (max-width: 1000px) {
+    .game-container { flex-direction: column; gap: 20px; }
+    .sidebar { flex-direction: row; flex-wrap: wrap; min-width: unset; width: auto !important; }
+    .sidebar > * { flex: 1; min-width: 140px; }
+    .chat-panel { width: 100%; height: 300px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="game-container">
+  <div class="sidebar">
+    <a href="index.html" class="back-link">&larr; Back</a>
+    <div class="game-title">Mahjong<span>Solitaire</span></div>
+
+    <div class="mode-panel">
+      <h3>Game Mode</h3>
+      <div class="mode-toggle">
+        <button class="mode-btn active" data-mode="solo" id="btnSolo">Solo</button>
+        <button class="mode-btn" data-mode="llm" id="btnLLM">vs LLM</button>
+      </div>
+      <div class="llm-section" id="llmSection">
+        <div class="llm-label">Ollama Model</div>
+        <select id="modelSelect" class="model-select">
+          <option>Loading models...</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="score-panel">
+      <h3>Progress</h3>
+      <div class="score-row">
+        <span class="score-label">Tiles Left</span>
+        <span class="score-value" id="tilesLeft">72</span>
+      </div>
+      <div class="score-row">
+        <span class="score-label">Matches</span>
+        <span class="score-value" id="matchCount">0</span>
+      </div>
+      <div class="score-row">
+        <span class="score-label">Free Pairs</span>
+        <span class="score-value" id="freePairs">0</span>
+      </div>
+    </div>
+
+    <div class="status-msg" id="statusMsg">Click a free tile to begin.</div>
+
+    <div class="btn-row">
+      <button class="btn-hint" id="btnHint">Hint</button>
+      <button class="btn-shuffle" id="btnShuffle">Shuffle</button>
+    </div>
+    <button class="btn-new" id="btnNew">New Game</button>
+  </div>
+
+  <div class="board-frame">
+    <canvas id="board"></canvas>
+  </div>
+
+  <div class="chat-panel" id="chatPanel">
+    <div class="chat-header">Commentary</div>
+    <div class="chat-messages" id="chatMessages">
+      <div class="chat-bubble system">The LLM kibitzer watches and commentates on your play.</div>
+    </div>
+    <div class="chat-input-row">
+      <input type="text" class="chat-input" id="chatInput" placeholder="Say something..." maxlength="200" autocomplete="off">
+      <button class="chat-send" id="chatSend">Send</button>
+    </div>
+  </div>
+  <div class="chat-spacer" id="chatSpacer"></div>
+</div>
+
+<script>
+// ══════════════════════════════════════
+// ── Audio ──
+// ══════════════════════════════════════
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx;
+function ensureAudio() { if (!audioCtx) audioCtx = new AudioCtx(); }
+
+function playSound(type) {
+  ensureAudio();
+  const actx = audioCtx;
+  const now = actx.currentTime;
+  const g = actx.createGain();
+  g.connect(actx.destination);
+
+  if (type === 'click') {
+    const o = actx.createOscillator();
+    o.type = 'sine'; o.frequency.setValueAtTime(800, now);
+    o.frequency.exponentialRampToValueAtTime(500, now + 0.05);
+    g.gain.setValueAtTime(0.06, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+    o.connect(g); o.start(now); o.stop(now + 0.07);
+  } else if (type === 'match') {
+    [660, 880, 1100].forEach((f, i) => {
+      const o = actx.createOscillator();
+      const gg = actx.createGain();
+      o.type = 'sine'; o.frequency.value = f;
+      gg.gain.setValueAtTime(0, now + i * 0.06);
+      gg.gain.linearRampToValueAtTime(0.07, now + i * 0.06 + 0.02);
+      gg.gain.exponentialRampToValueAtTime(0.001, now + i * 0.06 + 0.15);
+      o.connect(gg); gg.connect(actx.destination);
+      o.start(now + i * 0.06); o.stop(now + i * 0.06 + 0.15);
+    });
+  } else if (type === 'shuffle') {
+    for (let i = 0; i < 6; i++) {
+      const o = actx.createOscillator();
+      const gg = actx.createGain();
+      o.type = 'triangle';
+      o.frequency.value = 200 + Math.random() * 400;
+      gg.gain.setValueAtTime(0, now + i * 0.04);
+      gg.gain.linearRampToValueAtTime(0.04, now + i * 0.04 + 0.01);
+      gg.gain.exponentialRampToValueAtTime(0.001, now + i * 0.04 + 0.06);
+      o.connect(gg); gg.connect(actx.destination);
+      o.start(now + i * 0.04); o.stop(now + i * 0.04 + 0.06);
+    }
+  } else if (type === 'win') {
+    [523, 659, 784, 1047].forEach((f, i) => {
+      const o = actx.createOscillator();
+      const gg = actx.createGain();
+      o.type = 'sine'; o.frequency.value = f;
+      gg.gain.setValueAtTime(0, now + i * 0.12);
+      gg.gain.linearRampToValueAtTime(0.08, now + i * 0.12 + 0.03);
+      gg.gain.exponentialRampToValueAtTime(0.001, now + i * 0.12 + 0.3);
+      o.connect(gg); gg.connect(actx.destination);
+      o.start(now + i * 0.12); o.stop(now + i * 0.12 + 0.3);
+    });
+  }
+}
+
+// ══════════════════════════════════════
+// ── Canvas Setup ──
+// ══════════════════════════════════════
+const canvas = document.getElementById('board');
+const ctx = canvas.getContext('2d');
+const CW = 700, CH = 500;
+canvas.width = CW; canvas.height = CH;
+canvas.style.width = CW + 'px'; canvas.style.height = CH + 'px';
+
+// ══════════════════════════════════════
+// ── Tile Types (36 types) ──
+// ══════════════════════════════════════
+// 9 Circles, 9 Bamboo, 9 Characters, 4 Winds, 3 Dragons, 1 Flower, 1 Season = 27+4+3+1+1=36
+const TILE_TYPES = [];
+for (let i = 1; i <= 9; i++) TILE_TYPES.push({ suit: 'circle', rank: i });
+for (let i = 1; i <= 9; i++) TILE_TYPES.push({ suit: 'bamboo', rank: i });
+for (let i = 1; i <= 9; i++) TILE_TYPES.push({ suit: 'char', rank: i });
+['East', 'South', 'West', 'North'].forEach(w => TILE_TYPES.push({ suit: 'wind', rank: w }));
+['Red', 'Green', 'White'].forEach(d => TILE_TYPES.push({ suit: 'dragon', rank: d }));
+TILE_TYPES.push({ suit: 'flower', rank: 'F' });
+TILE_TYPES.push({ suit: 'season', rank: 'S' });
+// 36 types x 2 copies = 72 tiles
+
+// ══════════════════════════════════════
+// ── Turtle Layout (3 layers, 72 tiles) ──
+// ══════════════════════════════════════
+// Layer 0 (bottom): roughly 10x5 = ~46 positions
+// Layer 1 (middle): 6x3 = 18 positions
+// Layer 2 (top): roughly 2x2 + extras = 8 positions
+// Total target: 72
+const LAYOUT = [];
+
+// Layer 0: wide base shape (48 tiles)
+// Row pattern for turtle shape
+const L0_ROWS = [
+  [1, 2, 3, 4, 5, 6, 7, 8],       // row 0: 8 tiles
+  [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], // row 1: 10 tiles
+  [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], // row 2: 10 tiles
+  [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], // row 3: 10 tiles
+  [1, 2, 3, 4, 5, 6, 7, 8],       // row 4: 8 tiles
+];
+// That gives us 8+10+10+10+8 = 46. Need 72. Adjust layers.
+
+// Let me design a proper 72-tile turtle layout
+// Layer 0: ~40 tiles, Layer 1: ~24 tiles, Layer 2: ~8 tiles = 72
+// Actually let's do: Layer 0: 40, Layer 1: 24, Layer 2: 8 = 72
+function buildLayout() {
+  const layout = [];
+
+  // Layer 0 (bottom): cross/turtle shape ~40 tiles
+  const l0 = [
+    //       col: 0  1  2  3  4  5  6  7  8  9
+    /* r0 */      [2, 3, 4, 5, 6, 7],
+    /* r1 */   [1, 2, 3, 4, 5, 6, 7, 8],
+    /* r2 */ [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+    /* r3 */   [1, 2, 3, 4, 5, 6, 7, 8],
+    /* r4 */      [2, 3, 4, 5, 6, 7],
+  ];
+  l0.forEach((cols, r) => cols.forEach(c => layout.push({ layer: 0, row: r, col: c })));
+  // 6+8+10+8+6 = 38
+
+  // Layer 1 (middle): ~24 tiles
+  const l1 = [
+    [3, 4, 5, 6],
+    [2, 3, 4, 5, 6, 7],
+    [2, 3, 4, 5, 6, 7],
+    [3, 4, 5, 6],
+  ];
+  l1.forEach((cols, r) => cols.forEach(c => layout.push({ layer: 1, row: r + 0.5, col: c + 0.5 })));
+  // 4+6+6+4 = 20
+
+  // Layer 2 (top): ~14 tiles to reach 72
+  const l2 = [
+    [4, 5],
+    [3.5, 4.5, 5.5],
+    [3.5, 4.5, 5.5],
+    [4, 5],
+  ];
+  l2.forEach((cols, r) => cols.forEach(c => layout.push({ layer: 2, row: r + 1, col: c + 0.5 })));
+  // 2+3+3+2 = 10
+
+  // 38+20+10 = 68, need 4 more. Add a small peak layer 3
+  layout.push({ layer: 3, row: 2, col: 5 });
+  layout.push({ layer: 3, row: 2, col: 6 });
+  layout.push({ layer: 3, row: 3, col: 5 });
+  layout.push({ layer: 3, row: 3, col: 6 });
+  // 68+4 = 72
+
+  return layout;
+}
+
+// ══════════════════════════════════════
+// ── Game State ──
+// ══════════════════════════════════════
+let tiles = [];        // { id, typeIdx, pos: {layer,row,col}, removed, x, y, w, h }
+let selected = null;   // tile id or null
+let hintPair = null;   // [id1, id2] or null
+let matchFlash = [];   // [{id, time}]
+let gameOver = false;
+let gameMode = 'solo'; // 'solo' or 'llm'
+let llmModel = '';
+let matchesMade = 0;
+let moveCount = 0;
+
+const TW = 48, TH = 58; // tile width, height on canvas
+const LAYER_OFFSET_X = -4, LAYER_OFFSET_Y = -4; // 3D stacking offset per layer
+
+function tileScreenPos(pos) {
+  const baseX = 60;
+  const baseY = 45;
+  const x = baseX + pos.col * (TW + 2) + pos.layer * LAYER_OFFSET_X;
+  const y = baseY + pos.row * (TH + 2) + pos.layer * LAYER_OFFSET_Y;
+  return { x, y };
+}
+
+function buildTiles(layoutPositions) {
+  // Create 72 tiles: 36 types x 2 copies
+  const typeIndices = [];
+  for (let i = 0; i < 36; i++) {
+    typeIndices.push(i, i);
+  }
+  // Shuffle
+  for (let i = typeIndices.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [typeIndices[i], typeIndices[j]] = [typeIndices[j], typeIndices[i]];
+  }
+
+  return layoutPositions.map((pos, i) => {
+    const sp = tileScreenPos(pos);
+    return {
+      id: i,
+      typeIdx: typeIndices[i],
+      pos: { ...pos },
+      removed: false,
+      x: sp.x,
+      y: sp.y,
+      w: TW,
+      h: TH
+    };
+  });
+}
+
+// Check if tile is free (can be selected)
+function isFree(tile) {
+  if (tile.removed) return false;
+
+  // Check: no tile on top (higher layer overlapping this tile)
+  const hasOnTop = tiles.some(t => {
+    if (t.removed || t.id === tile.id) return false;
+    if (t.pos.layer <= tile.pos.layer) return false;
+    // Check overlap: tiles on higher layer overlap if their positions cover this tile
+    const dx = Math.abs(t.pos.col - tile.pos.col);
+    const dy = Math.abs(t.pos.row - tile.pos.row);
+    return dx < 1.0 && dy < 1.0;
+  });
+  if (hasOnTop) return false;
+
+  // Check: at least one side (left or right) unblocked
+  // A tile blocks left/right if same layer, same row (within tolerance), adjacent col
+  const blocksLeft = tiles.some(t => {
+    if (t.removed || t.id === tile.id || t.pos.layer !== tile.pos.layer) return false;
+    const dy = Math.abs(t.pos.row - tile.pos.row);
+    const dx = tile.pos.col - t.pos.col;
+    return dy < 0.9 && dx > 0.5 && dx < 1.5;
+  });
+  const blocksRight = tiles.some(t => {
+    if (t.removed || t.id === tile.id || t.pos.layer !== tile.pos.layer) return false;
+    const dy = Math.abs(t.pos.row - tile.pos.row);
+    const dx = t.pos.col - tile.pos.col;
+    return dy < 0.9 && dx > 0.5 && dx < 1.5;
+  });
+
+  return !blocksLeft || !blocksRight;
+}
+
+function findFreePairs() {
+  const freeTiles = tiles.filter(t => !t.removed && isFree(t));
+  const pairs = [];
+  for (let i = 0; i < freeTiles.length; i++) {
+    for (let j = i + 1; j < freeTiles.length; j++) {
+      if (freeTiles[i].typeIdx === freeTiles[j].typeIdx) {
+        pairs.push([freeTiles[i].id, freeTiles[j].id]);
+      }
+    }
+  }
+  return pairs;
+}
+
+// ══════════════════════════════════════
+// ── Drawing ──
+// ══════════════════════════════════════
+const CHAR_SYMBOLS = ['一', '二', '三', '四', '五', '六', '七', '八', '九'];
+const WIND_SYMBOLS = { East: '東', South: '南', West: '西', North: '北' };
+const DRAGON_SYMBOLS = { Red: '中', Green: '發', White: '　' };
+
+function drawTileSymbol(cx, cy, typeIdx) {
+  const t = TILE_TYPES[typeIdx];
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  if (t.suit === 'circle') {
+    // Draw circles pattern
+    const r = t.rank;
+    ctx.fillStyle = '#2266aa';
+    ctx.font = 'bold 11px DM Sans';
+    // Draw a number with a circle around it
+    ctx.beginPath();
+    ctx.arc(cx, cy - 4, 12, 0, Math.PI * 2);
+    ctx.strokeStyle = '#2266aa';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.fillText(r, cx, cy - 4);
+    ctx.font = '9px DM Sans';
+    ctx.fillStyle = '#886644';
+    ctx.fillText('Circles', cx, cy + 14);
+  } else if (t.suit === 'bamboo') {
+    ctx.fillStyle = '#228844';
+    ctx.font = 'bold 11px DM Sans';
+    // Draw bamboo lines
+    const r = t.rank;
+    const barW = 3, barH = 16;
+    const count = Math.min(r, 5);
+    const startX = cx - (count * (barW + 2)) / 2 + barW / 2;
+    for (let i = 0; i < count; i++) {
+      ctx.fillRect(startX + i * (barW + 2) - barW / 2, cy - 14, barW, barH);
+    }
+    ctx.fillText(r, cx, cy + 14);
+  } else if (t.suit === 'char') {
+    ctx.fillStyle = '#cc2222';
+    ctx.font = 'bold 18px serif';
+    ctx.fillText(CHAR_SYMBOLS[t.rank - 1], cx, cy - 2);
+    ctx.font = '8px DM Sans';
+    ctx.fillStyle = '#886644';
+    ctx.fillText(t.rank, cx, cy + 16);
+  } else if (t.suit === 'wind') {
+    ctx.fillStyle = '#1a1a3a';
+    ctx.font = 'bold 22px serif';
+    ctx.fillText(WIND_SYMBOLS[t.rank], cx, cy);
+  } else if (t.suit === 'dragon') {
+    if (t.rank === 'Red') {
+      ctx.fillStyle = '#cc2222';
+      ctx.font = 'bold 24px serif';
+      ctx.fillText('中', cx, cy);
+    } else if (t.rank === 'Green') {
+      ctx.fillStyle = '#228844';
+      ctx.font = 'bold 24px serif';
+      ctx.fillText('發', cx, cy);
+    } else {
+      // White dragon: empty rectangle
+      ctx.strokeStyle = '#4466aa';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(cx - 10, cy - 12, 20, 24);
+    }
+  } else if (t.suit === 'flower') {
+    ctx.fillStyle = '#cc6688';
+    ctx.font = '22px serif';
+    ctx.fillText('✿', cx, cy);
+  } else if (t.suit === 'season') {
+    ctx.fillStyle = '#cc8844';
+    ctx.font = '22px serif';
+    ctx.fillText('☀', cx, cy);
+  }
+}
+
+function draw() {
+  ctx.clearRect(0, 0, CW, CH);
+
+  // Background
+  ctx.fillStyle = '#0a1210';
+  ctx.fillRect(0, 0, CW, CH);
+
+  // Subtle pattern
+  ctx.fillStyle = 'rgba(74,154,106,0.03)';
+  for (let i = 0; i < CW; i += 40) {
+    for (let j = 0; j < CH; j += 40) {
+      ctx.fillRect(i, j, 1, 1);
+    }
+  }
+
+  const now = Date.now();
+
+  // Sort tiles: draw from bottom layer to top, back row to front
+  const sortedTiles = [...tiles].filter(t => !t.removed).sort((a, b) => {
+    if (a.pos.layer !== b.pos.layer) return a.pos.layer - b.pos.layer;
+    if (a.pos.row !== b.pos.row) return a.pos.row - b.pos.row;
+    return a.pos.col - b.pos.col;
+  });
+
+  for (const tile of sortedTiles) {
+    const free = isFree(tile);
+    const isSelected = selected === tile.id;
+    const isHint = hintPair && (hintPair[0] === tile.id || hintPair[1] === tile.id);
+    const flash = matchFlash.find(f => f.id === tile.id);
+    const isFlash = flash && (now - flash.time < 300);
+
+    const x = tile.x;
+    const y = tile.y;
+    const depth = 3; // 3D depth
+
+    // Skip if flashing and past animation
+    if (flash && now - flash.time >= 300) continue;
+
+    // 3D side (right)
+    ctx.fillStyle = '#a89878';
+    ctx.beginPath();
+    ctx.moveTo(x + TW, y);
+    ctx.lineTo(x + TW + depth, y + depth);
+    ctx.lineTo(x + TW + depth, y + TH + depth);
+    ctx.lineTo(x + TW, y + TH);
+    ctx.closePath();
+    ctx.fill();
+
+    // 3D side (bottom)
+    ctx.fillStyle = '#8a7a60';
+    ctx.beginPath();
+    ctx.moveTo(x, y + TH);
+    ctx.lineTo(x + depth, y + TH + depth);
+    ctx.lineTo(x + TW + depth, y + TH + depth);
+    ctx.lineTo(x + TW, y + TH);
+    ctx.closePath();
+    ctx.fill();
+
+    // Tile face
+    if (isFlash) {
+      ctx.fillStyle = 'rgba(74,200,106,0.6)';
+    } else if (free) {
+      ctx.fillStyle = '#f0e8d8';
+    } else {
+      ctx.fillStyle = '#d0c8b4';
+    }
+
+    ctx.fillRect(x, y, TW, TH);
+
+    // Inner border
+    ctx.strokeStyle = free ? '#c8bca8' : '#b0a890';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x + 2, y + 2, TW - 4, TH - 4);
+
+    // Draw symbol
+    if (!isFlash) {
+      drawTileSymbol(x + TW / 2, y + TH / 2, tile.typeIdx);
+    }
+
+    // Selection highlight
+    if (isSelected) {
+      ctx.strokeStyle = '#c9a84c';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(x - 1, y - 1, TW + 2, TH + 2);
+    }
+
+    // Hint highlight
+    if (isHint && !isSelected) {
+      ctx.strokeStyle = 'rgba(74,200,106,0.8)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([4, 4]);
+      ctx.strokeRect(x - 1, y - 1, TW + 2, TH + 2);
+      ctx.setLineDash([]);
+    }
+  }
+
+  // Continue animation
+  if (matchFlash.some(f => now - f.time < 300)) {
+    requestAnimationFrame(draw);
+  }
+}
+
+// ══════════════════════════════════════
+// ── Game Logic ──
+// ══════════════════════════════════════
+function updateStats() {
+  const remaining = tiles.filter(t => !t.removed).length;
+  document.getElementById('tilesLeft').textContent = remaining;
+  document.getElementById('matchCount').textContent = matchesMade;
+  const pairs = findFreePairs();
+  document.getElementById('freePairs').textContent = pairs.length;
+}
+
+function setStatus(msg, cls) {
+  const el = document.getElementById('statusMsg');
+  el.textContent = msg;
+  el.className = 'status-msg' + (cls ? ' ' + cls : '');
+}
+
+function checkGameState() {
+  const remaining = tiles.filter(t => !t.removed).length;
+  if (remaining === 0) {
+    gameOver = true;
+    setStatus('Congratulations! All tiles cleared!', 'winner');
+    playSound('win');
+    if (gameMode === 'llm') autoComment('win');
+    return;
+  }
+  const pairs = findFreePairs();
+  if (pairs.length === 0) {
+    setStatus('No more moves! Try shuffle or new game.', 'stuck');
+    if (gameMode === 'llm') autoComment('stuck');
+    return;
+  }
+}
+
+function handleTileClick(clickedTile) {
+  if (gameOver) return;
+  if (!isFree(clickedTile)) return;
+
+  hintPair = null;
+
+  if (selected === null) {
+    selected = clickedTile.id;
+    playSound('click');
+    draw();
+    return;
+  }
+
+  if (selected === clickedTile.id) {
+    selected = null;
+    draw();
+    return;
+  }
+
+  const selTile = tiles[selected];
+
+  if (selTile.typeIdx === clickedTile.typeIdx) {
+    // Match!
+    matchesMade++;
+    moveCount++;
+    selTile.removed = true;
+    clickedTile.removed = true;
+    selected = null;
+
+    matchFlash = [
+      { id: selTile.id, time: Date.now() },
+      { id: clickedTile.id, time: Date.now() }
+    ];
+    // Temporarily un-remove for flash animation
+    selTile.removed = false;
+    clickedTile.removed = false;
+    draw();
+    playSound('match');
+
+    setTimeout(() => {
+      selTile.removed = true;
+      clickedTile.removed = true;
+      matchFlash = [];
+      updateStats();
+      draw();
+      checkGameState();
+      if (gameMode === 'llm' && !gameOver) {
+        if (moveCount === 1 || matchesMade % 3 === 0 || Math.random() < 0.3) {
+          autoComment('match');
+        }
+      }
+    }, 300);
+  } else {
+    // No match - select the new tile instead
+    selected = clickedTile.id;
+    playSound('click');
+    draw();
+  }
+}
+
+// ══════════════════════════════════════
+// ── Click Detection ──
+// ══════════════════════════════════════
+canvas.addEventListener('click', (e) => {
+  if (gameOver) return;
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+
+  // Check from top layer down (click topmost tile)
+  const activeTiles = tiles.filter(t => !t.removed).sort((a, b) => b.pos.layer - a.pos.layer);
+
+  for (const tile of activeTiles) {
+    if (mx >= tile.x && mx <= tile.x + tile.w && my >= tile.y && my <= tile.y + tile.h) {
+      handleTileClick(tile);
+      return;
+    }
+  }
+
+  // Clicked empty space
+  selected = null;
+  hintPair = null;
+  draw();
+});
+
+// ══════════════════════════════════════
+// ── Hint ──
+// ══════════════════════════════════════
+document.getElementById('btnHint').addEventListener('click', () => {
+  if (gameOver) return;
+  const pairs = findFreePairs();
+  if (pairs.length > 0) {
+    hintPair = pairs[Math.floor(Math.random() * pairs.length)];
+    setStatus('Hint: matching pair highlighted!');
+    draw();
+    if (gameMode === 'llm') autoComment('hint');
+  } else {
+    setStatus('No matching pairs available!', 'stuck');
+  }
+});
+
+// ══════════════════════════════════════
+// ── Shuffle ──
+// ══════════════════════════════════════
+document.getElementById('btnShuffle').addEventListener('click', () => {
+  if (gameOver) return;
+  const remaining = tiles.filter(t => !t.removed);
+  if (remaining.length === 0) return;
+
+  // Collect type indices
+  const typeIdxs = remaining.map(t => t.typeIdx);
+  // Shuffle them
+  for (let i = typeIdxs.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [typeIdxs[i], typeIdxs[j]] = [typeIdxs[j], typeIdxs[i]];
+  }
+  // Reassign
+  remaining.forEach((t, i) => t.typeIdx = typeIdxs[i]);
+
+  selected = null;
+  hintPair = null;
+  playSound('shuffle');
+  setStatus('Tiles shuffled!');
+  updateStats();
+  draw();
+  if (gameMode === 'llm') autoComment('shuffle');
+});
+
+// ══════════════════════════════════════
+// ── New Game ──
+// ══════════════════════════════════════
+function initGame() {
+  const layout = buildLayout();
+  tiles = buildTiles(layout);
+  selected = null;
+  hintPair = null;
+  matchFlash = [];
+  gameOver = false;
+  matchesMade = 0;
+  moveCount = 0;
+  setStatus('Click a free tile to begin.');
+  updateStats();
+  draw();
+}
+
+document.getElementById('btnNew').addEventListener('click', () => {
+  initGame();
+  chatSessionId = 'session-' + Date.now();
+  chatMessages.innerHTML = '<div class="chat-bubble system">The LLM kibitzer watches and commentates on your play.</div>';
+  fetch('/api/chat/clear', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sessionId: chatSessionId })
+  }).catch(() => {});
+});
+
+// ══════════════════════════════════════
+// ── Mode Switching ──
+// ══════════════════════════════════════
+const btnSolo = document.getElementById('btnSolo');
+const btnLLM = document.getElementById('btnLLM');
+const llmSection = document.getElementById('llmSection');
+const chatPanel = document.getElementById('chatPanel');
+const chatSpacerEl = document.getElementById('chatSpacer');
+
+function setMode(mode) {
+  gameMode = mode;
+  btnSolo.classList.toggle('active', mode === 'solo');
+  btnLLM.classList.toggle('active', mode === 'llm');
+  llmSection.classList.toggle('visible', mode === 'llm');
+  showChat(mode === 'llm');
+}
+
+function showChat(visible) {
+  chatPanel.classList.toggle('visible', visible);
+  chatSpacerEl.style.display = visible ? 'none' : 'block';
+}
+
+btnSolo.addEventListener('click', () => setMode('solo'));
+btnLLM.addEventListener('click', () => setMode('llm'));
+
+// ══════════════════════════════════════
+// ── Ollama Model Loading ──
+// ══════════════════════════════════════
+async function loadModels() {
+  const sel = document.getElementById('modelSelect');
+  try {
+    const res = await fetch('/api/models');
+    const data = await res.json();
+    if (data.models && data.models.length > 0) {
+      sel.innerHTML = '';
+      data.models.forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name; opt.textContent = name;
+        sel.appendChild(opt);
+      });
+      llmModel = data.models[0];
+    } else {
+      sel.innerHTML = '<option>No models found</option>';
+    }
+  } catch (e) {
+    sel.innerHTML = '<option>API unavailable</option>';
+  }
+}
+
+document.getElementById('modelSelect').addEventListener('change', (e) => {
+  llmModel = e.target.value;
+});
+
+loadModels();
+
+// ══════════════════════════════════════
+// ── Chat Integration ──
+// ══════════════════════════════════════
+const chatMessages = document.getElementById('chatMessages');
+const chatInput = document.getElementById('chatInput');
+const chatSend = document.getElementById('chatSend');
+let chatSessionId = 'session-' + Date.now();
+let chatBusy = false;
+
+function addChatBubble(text, type) {
+  const bubble = document.createElement('div');
+  bubble.className = 'chat-bubble ' + type;
+  if (type === 'llm-typing') {
+    bubble.innerHTML = '<span class="thinking-dots"><span>.</span><span>.</span><span>.</span></span>';
+  } else {
+    bubble.textContent = text;
+  }
+  chatMessages.appendChild(bubble);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+  return bubble;
+}
+
+function boardToString() {
+  const remaining = tiles.filter(t => !t.removed);
+  const free = remaining.filter(t => isFree(t));
+  const pairs = findFreePairs();
+  return `Tiles remaining: ${remaining.length}, Free tiles: ${free.length}, Matching pairs available: ${pairs.length}, Matches made: ${matchesMade}`;
+}
+
+function getGameStatus() {
+  if (gameOver) {
+    const remaining = tiles.filter(t => !t.removed).length;
+    return remaining === 0 ? 'won' : 'stuck';
+  }
+  return 'playing';
+}
+
+async function sendChat() {
+  const text = chatInput.value.trim();
+  if (!text || chatBusy) return;
+
+  chatInput.value = '';
+  addChatBubble(text, 'user');
+
+  chatBusy = true;
+  const typingBubble = addChatBubble('...', 'llm-typing');
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: text,
+        model: llmModel || 'qwen2.5-coder:14b',
+        board: boardToString(),
+        sessionId: chatSessionId,
+        gameStatus: getGameStatus(),
+        gameName: 'mahjong solitaire'
+      })
+    });
+    const data = await res.json();
+    typingBubble.remove();
+    addChatBubble(data.reply || '...', 'llm');
+  } catch (e) {
+    typingBubble.remove();
+    addChatBubble('*connection lost*', 'system');
+  }
+  chatBusy = false;
+}
+
+chatSend.addEventListener('click', sendChat);
+chatInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') sendChat();
+});
+
+// Auto-comment: LLM kibitzer commentates
+async function autoComment(event) {
+  if (gameMode !== 'llm' || chatBusy) return;
+
+  chatBusy = true;
+  const typingBubble = addChatBubble('...', 'llm-typing');
+
+  const prompts = {
+    match: [
+      '*player just matched a pair* Comment on their move. Be impressed if tiles remaining is low, mildly encouraging otherwise.',
+      '*player found a match* React as a kibitzer watching over their shoulder. Mix praise with mild teasing.',
+      '*player matched tiles* Make a witty observation about the board state.',
+    ],
+    hint: [
+      '*player asked for a hint* Tease them mercilessly for needing help. Be funny, not mean.',
+      '*player used the hint button* Mock them gently. Suggest they need glasses.',
+    ],
+    shuffle: [
+      '*player shuffled the board* They were stuck! Be dramatically disappointed in them. Suggest they lack pattern recognition.',
+      '*player had to shuffle* Express shock and dismay. Question their tile-matching abilities.',
+    ],
+    stuck: [
+      '*no more moves available* The board is deadlocked. Be sympathetic but also a little smug. Suggest shuffling.',
+      '*player is stuck with no moves* Console them sarcastically.',
+    ],
+    win: [
+      '*player cleared all tiles and won!* Be genuinely impressed. Celebrate with them. Use dramatic praise.',
+      '*player won the game!* React with amazement. Declare them a mahjong master.',
+    ],
+  };
+
+  const options = prompts[event] || prompts.match;
+  const prompt = options[Math.floor(Math.random() * options.length)];
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: prompt,
+        model: llmModel || 'qwen2.5-coder:14b',
+        board: boardToString(),
+        sessionId: chatSessionId,
+        gameStatus: getGameStatus(),
+        gameName: 'mahjong solitaire'
+      })
+    });
+    const data = await res.json();
+    typingBubble.remove();
+    addChatBubble(data.reply || '...', 'llm');
+  } catch (e) {
+    typingBubble.remove();
+  }
+  chatBusy = false;
+}
+
+// ══════════════════════════════════════
+// ── Start ──
+// ══════════════════════════════════════
+showChat(false);
+initGame();
+</script>
+
+</body>
+</html>
