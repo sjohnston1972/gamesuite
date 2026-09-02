@@ -22,6 +22,11 @@ def index():
     return send_from_directory(app.static_folder, "index.html")
 
 
+@app.route("/index.html")
+def index_html():
+    return send_from_directory(app.static_folder, "index.html")
+
+
 @app.route("/<game>.html")
 def serve_game(game):
     if game in GAMES:
